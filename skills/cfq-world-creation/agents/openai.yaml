@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ World Creation"
+  short_description: "Create and structure new CFQ learning worlds"
+  default_prompt: "Use $cfq-world-creation to add a new learning world card or a full playable world dataset."

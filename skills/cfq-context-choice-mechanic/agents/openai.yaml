@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ Context Choice"
+  short_description: "Build and tune CFQ Context Choice tasks"
+  default_prompt: "Use $cfq-context-choice-mechanic to create or rebalance context_choice tasks with stronger disambiguation."

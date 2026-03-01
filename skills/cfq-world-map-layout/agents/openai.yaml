@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ World Map Layout"
+  short_description: "Design and tune CFQ world map layout states"
+  default_prompt: "Use $cfq-world-map-layout to adjust zone coordinates, map visuals, and node interaction states."

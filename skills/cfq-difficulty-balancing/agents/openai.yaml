@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ Difficulty Balancing"
+  short_description: "Tune CFQ difficulty balance and thresholds"
+  default_prompt: "Use $cfq-difficulty-balancing to rebalance easy/medium/hard attempts, penalties, multipliers, and thresholds."

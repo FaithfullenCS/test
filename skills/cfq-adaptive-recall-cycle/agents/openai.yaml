@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ Adaptive Recall"
+  short_description: "Maintain CFQ Adaptive Recall scheduling"
+  default_prompt: "Use $cfq-adaptive-recall-cycle to adjust Leitner queue logic, due targeting, and retention bonus behavior."

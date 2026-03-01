@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ Term Forge"
+  short_description: "Build and tune CFQ Term Forge tasks"
+  default_prompt: "Use $cfq-term-forge-mechanic to add or rebalance term_forge challenges in src/data/challenges.ts."

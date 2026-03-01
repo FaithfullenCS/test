@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ Liquidity Sprint"
+  short_description: "Maintain CFQ Liquidity Sprint timers and rank"
+  default_prompt: "Use $cfq-liquidity-sprint-mode to tune sprint queue mix, timer, score formula, and local leaderboard."

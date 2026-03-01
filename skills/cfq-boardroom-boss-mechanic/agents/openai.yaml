@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ Boardroom Boss"
+  short_description: "Build and tune CFQ Boardroom Boss tasks"
+  default_prompt: "Use $cfq-boardroom-boss-mechanic to author boardroom_boss prompts, keywords, and semantic acceptance rules."

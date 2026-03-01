@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ Scoring and Progression"
+  short_description: "Maintain CFQ scoring, rewards, progression"
+  default_prompt: "Use $cfq-scoring-and-progression to update LP rules, streaks, unlock chain, badges, and persistence."

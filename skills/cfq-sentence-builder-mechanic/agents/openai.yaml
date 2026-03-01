@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ Sentence Builder"
+  short_description: "Build and tune CFQ Sentence Builder tasks"
+  default_prompt: "Use $cfq-sentence-builder-mechanic to add or refine sentence_builder challenges and fragment ordering."

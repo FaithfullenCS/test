@@ -1,0 +1,4 @@
+interface:
+  display_name: "CFQ Case Ladder"
+  short_description: "Maintain CFQ Case Ladder scenarios and flow"
+  default_prompt: "Use $cfq-case-ladder-mode to edit 3-step case scenarios, chain multipliers, and case tracking."
