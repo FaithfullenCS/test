@@ -125,6 +125,7 @@ export function ChallengePage() {
     submitTrainerAnswer,
     buildTrainerQueue,
     startAdaptiveRecallSession,
+    startLiquiditySprintSession,
     recordSprintResult,
     recordTrainerSessionResult,
     setCurrentZone,
@@ -153,6 +154,7 @@ export function ChallengePage() {
   const [sprintTimeLeft, setSprintTimeLeft] = useState<number | null>(null);
   const [sprintRank, setSprintRank] = useState<number | null>(null);
   const [sprintScore, setSprintScore] = useState<number | null>(null);
+  const [sessionTheme, setSessionTheme] = useState<{ title: string; brief: string } | null>(null);
 
   const trainerChallengeId = isTrainerMode ? trainerQueue[trainerIndex] : undefined;
   const trainerChallenge = trainerChallengeId ? challengeById[trainerChallengeId] : undefined;
@@ -194,18 +196,21 @@ export function ChallengePage() {
       setArcDueChallengeIds(new Set(plan.dueChallengeIds));
       setSessionSize(ADAPTIVE_RECALL_SESSION_SIZE);
       setSprintTimeLeft(null);
+      setSessionTheme({ title: plan.title, brief: plan.brief });
     } else if (trainerMechanic === 'liquidity_sprint') {
-      const queue = buildTrainerQueue(trainerMechanic, trainerDifficulty, SPRINT_SESSION_SIZE);
-      setTrainerQueue(queue);
+      const plan = startLiquiditySprintSession(SPRINT_SESSION_SIZE);
+      setTrainerQueue(plan.queue);
       setArcDueChallengeIds(new Set());
       setSessionSize(SPRINT_SESSION_SIZE);
       setSprintTimeLeft(SPRINT_DURATION_SECONDS);
+      setSessionTheme({ title: plan.title, brief: plan.brief });
     } else {
       const queue = buildTrainerQueue(trainerMechanic, trainerDifficulty, TRAINER_SESSION_SIZE);
       setTrainerQueue(queue);
       setArcDueChallengeIds(new Set());
       setSessionSize(TRAINER_SESSION_SIZE);
       setSprintTimeLeft(null);
+      setSessionTheme(null);
     }
 
     setTrainerIndex(0);
@@ -282,7 +287,7 @@ export function ChallengePage() {
         if (previous === null) {
           return null;
         }
-        return previous - 1;
+        return Math.max(0, previous - 1);
       });
     }, 1000);
 
@@ -379,7 +384,11 @@ export function ChallengePage() {
       return;
     }
 
-    if ((sprintTimeLeft ?? 0) > 0) {
+    if (sprintTimeLeft === null) {
+      return;
+    }
+
+    if (sprintTimeLeft > 0) {
       return;
     }
 
@@ -680,6 +689,11 @@ export function ChallengePage() {
           </div>
           <h2>{activeZone.title}</h2>
           <p>Задание: {challenge.promptEn}</p>
+          {isTrainerMode && sessionTheme && (
+            <p className="muted">
+              Пакет: <strong>{sessionTheme.title}</strong>. {sessionTheme.brief}
+            </p>
+          )}
           {isTrainerMode && (
             <p className="muted">
               Сессия: {Math.min(trainerIndex + 1, sessionSize)} / {sessionSize}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { caseScenarios, zones } from '../data';
+import { adaptiveRecallDecks, caseScenarios, sprintScenarios, zones } from '../data';
 import {
   difficultyDescription,
   difficultyTitle,
@@ -68,6 +68,16 @@ export function TrainerPage() {
     [unlockedZones],
   );
 
+  const availableArcDecks = useMemo(
+    () => adaptiveRecallDecks.filter((deck) => unlockedZones.has(deck.zoneId)),
+    [unlockedZones],
+  );
+
+  const availableSprintScenarios = useMemo(
+    () => sprintScenarios.filter((scenario) => unlockedZones.has(scenario.zoneId)),
+    [unlockedZones],
+  );
+
   return (
     <section className="panel trainer-panel">
       <header className="panel-header">
@@ -88,6 +98,9 @@ export function TrainerPage() {
           Ответов: {progress.trainerStats.correctAnswers}/{progress.trainerStats.answersGiven}
         </span>
         <span className="chip">ARC due: {dueCount}</span>
+        <span className="chip">ARC пакетов: {availableArcDecks.length}</span>
+        <span className="chip">Sprint сценариев: {availableSprintScenarios.length}</span>
+        <span className="chip">Case сценариев: {availableCaseScenarios.length}</span>
       </div>
 
       {sprintTop.length > 0 && (
@@ -170,6 +183,11 @@ export function TrainerPage() {
                   <h3>{mechanicTitle(mode.id)}</h3>
                   <p>{mechanicDescription(mode.id)}</p>
                   <p className="trainer-feature">{mode.feature}</p>
+                  <p className="muted">
+                    {mode.id === 'adaptive_recall'
+                      ? `Тематических ARC-пакетов: ${availableArcDecks.length}`
+                      : `Тематических Sprint-сценариев: ${availableSprintScenarios.length}`}
+                  </p>
                   <button
                     type="button"
                     className="primary-button"

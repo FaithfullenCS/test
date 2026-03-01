@@ -22,7 +22,7 @@ describe('CasePage', () => {
     const user = userEvent.setup();
     renderCase();
 
-    await screen.findByText(/Кейс: Старт потока/);
+    await screen.findByText(/Кейс: Objective Alignment/);
     expect(screen.getByText(/Шаг 1 \/ 3/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Проверить ответ' })).toBeInTheDocument();
 
@@ -32,7 +32,8 @@ describe('CasePage', () => {
     if (option) {
       await user.click(option);
       await user.click(screen.getByRole('button', { name: 'Проверить ответ' }));
-      expect(screen.getByText(/LP|Осталось попыток/)).toBeInTheDocument();
+      expect(screen.getByText(/Объяснение:/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Следующий шаг|К итогам кейса/ })).toBeInTheDocument();
     }
   });
 });

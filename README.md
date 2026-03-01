@@ -4,26 +4,35 @@
 
 ## Что реализовано
 
-- 5 сюжетных зон, соответствующих разделам статьи.
-- 120 заранее подготовленных заданий (24 на зону).
-- 4 механики:
+- 5 сюжетных зон (по разделам статьи):
+  - `gate_of_flow`
+  - `operations_quarter`
+  - `finance_harbor`
+  - `investment_factory`
+  - `council_hall`
+- 120 базовых заданий (`24` на зону).
+- 4 core-механики:
   - `Term Forge`
   - `Sentence Builder`
   - `Context Choice`
   - `Boardroom Boss`
-- Дополнительные режимы:
-  - `Adaptive Recall Cycle` (Leitner-повтор, 12 задач, due/weak очередь)
-  - `Case Ladder` (10 сценариев, шаги `context -> sentence -> boss`)
-  - `Liquidity Sprint` (4 минуты, 8 задач, локальный топ-7)
-- Система наград `Liquidity Points (LP)`:
-  - +10 / +6 / +3 за 1/2/3 попытку
-  - штраф подсказки `-2 LP`
-  - бонус серии: `+8 LP` каждые 5 правильных подряд
-- Медали зоны: Bronze / Silver / Gold по порогам `60 / 80 / 92%`.
-- Разблокировка следующей зоны при завершении предыдущей с точностью от `70%`.
-- Профиль игрока, карта мира, финальный сертификат.
-- Профиль дополнен ARC due-метрикой, статистикой кейсов и локальным рейтингом спринтов.
+- 3 тренажёрных режима:
+  - `Adaptive Recall Cycle` (Leitner, 12 задач)
+  - `Case Ladder` (3-шаговые кейсы)
+  - `Liquidity Sprint` (8 задач за 4 минуты)
+- Профиль, карта мира, итоговый экран с сертификатом.
 - Полное локальное хранение прогресса через `localStorage`.
+
+## Скоринг и прогрессия
+
+- LP за верный ответ по попыткам: `+10 / +6 / +3`.
+- Штраф за подсказку зависит от сложности.
+- Бонус серии: `+8 LP` каждые 5 верных подряд.
+- Медали зоны:
+  - Bronze: `>= 60%`
+  - Silver: `>= 80%`
+  - Gold: `>= 92%`
+- Разблокировка следующей зоны: завершить предыдущую с точностью `>= 70%`.
 
 ## Технологии
 
@@ -41,8 +50,6 @@ npm install
 npm run dev
 ```
 
-Приложение откроется на локальном адресе Vite.
-
 ## Сборка
 
 ```bash
@@ -57,11 +64,64 @@ npm run test
 npm run test:e2e
 ```
 
-## Структура
+## Последние изменения
 
-- `src/data` - зоны и статический контент заданий
-- `src/lib` - игровой движок, селекторы, storage
-- `src/state` - глобальное состояние игры
-- `src/pages` - экраны приложения
-- `src/components` - UI-компоненты
-- `test/e2e` - end-to-end сценарии
+- Добавлены рыночно-обоснованные режимы:
+  - `Adaptive Recall Cycle` с Leitner-логикой (`8 due + 4 weak/stale`).
+  - `Case Ladder` с 3-шаговыми сценариями и chain-множителем.
+  - `Liquidity Sprint` на 4 минуты с локальным рейтингом.
+- Расширен контент:
+  - `Case Ladder`: 20 сценариев (по 4 на зону).
+  - ARC/Sprint: выделенные тематические наборы в `src/data/mechanicTasks.ts`.
+- Обновлены роуты и state/actions для новых режимов в `GameContext` и `ChallengePage`.
+- Стабилизированы тесты:
+  - Исправлено преждевременное завершение `Liquidity Sprint` при `sprintTimeLeft === null`.
+  - Усилена устойчивость `ChallengePage` unit-теста для hard-таймера.
+  - Усилена устойчивость `trainer` e2e-сценария к re-render во время перехода между заданиями.
+
+## Архитектура
+
+### Поток выполнения
+
+1. `src/main.tsx` монтирует приложение.
+2. `src/App.tsx` подключает роутинг и `GameProvider`.
+3. `src/state/GameContext.tsx` управляет прогрессом, очередями тренажёра и сохранением.
+4. `src/pages/*` и `src/components/*` рендерят UI и вызывают actions контекста.
+5. `src/lib/engine.ts` считает очки, проверяет ответы и рассчитывает прогрессию.
+6. `src/lib/storage.ts` валидирует/мигрирует данные в `localStorage`.
+
+### Карта папок (с документацией)
+
+- [`src/README.md`](src/README.md)
+- [`src/components/README.md`](src/components/README.md)
+- [`src/data/README.md`](src/data/README.md)
+- [`src/lib/README.md`](src/lib/README.md)
+- [`src/pages/README.md`](src/pages/README.md)
+- [`src/state/README.md`](src/state/README.md)
+- [`src/types/README.md`](src/types/README.md)
+- [`src/test/README.md`](src/test/README.md)
+- [`test/README.md`](test/README.md)
+- [`test/e2e/README.md`](test/e2e/README.md)
+- [`skills/README.md`](skills/README.md)
+
+### Документация по игровым механикам
+
+- [`skills/cfq-term-forge-mechanic/README.md`](skills/cfq-term-forge-mechanic/README.md)
+- [`skills/cfq-sentence-builder-mechanic/README.md`](skills/cfq-sentence-builder-mechanic/README.md)
+- [`skills/cfq-context-choice-mechanic/README.md`](skills/cfq-context-choice-mechanic/README.md)
+- [`skills/cfq-boardroom-boss-mechanic/README.md`](skills/cfq-boardroom-boss-mechanic/README.md)
+- [`skills/cfq-adaptive-recall-cycle/README.md`](skills/cfq-adaptive-recall-cycle/README.md)
+- [`skills/cfq-case-ladder-mode/README.md`](skills/cfq-case-ladder-mode/README.md)
+- [`skills/cfq-liquidity-sprint-mode/README.md`](skills/cfq-liquidity-sprint-mode/README.md)
+- [`skills/cfq-difficulty-balancing/README.md`](skills/cfq-difficulty-balancing/README.md)
+- [`skills/cfq-scoring-and-progression/README.md`](skills/cfq-scoring-and-progression/README.md)
+- [`skills/cfq-world-map-layout/README.md`](skills/cfq-world-map-layout/README.md)
+- [`skills/cfq-world-creation/README.md`](skills/cfq-world-creation/README.md)
+
+## Где расширять проект
+
+- Новый учебный мир: `src/data/worlds.ts`.
+- Новая зона/контент: `src/data/zones.ts`, `src/data/challenges.ts`.
+- Новые кейсы: `src/data/cases.ts`.
+- Новые ARC/Sprint наборы: `src/data/mechanicTasks.ts`.
+- Правила скоринга/сложности: `src/lib/engine.ts`.

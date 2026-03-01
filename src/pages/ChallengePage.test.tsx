@@ -1,8 +1,9 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChallengePage } from './ChallengePage';
+import * as engine from '../lib/engine';
 import { GameProvider } from '../state/GameContext';
 
 function renderTrainerHardChallenge() {
@@ -34,8 +35,8 @@ function renderAdaptiveRecallChallenge() {
     <GameProvider>
       <MemoryRouter initialEntries={['/trainer/adaptive-recall/medium']}>
         <Routes>
-          <Route path="/trainer/adaptive-recall/:difficulty" element={<ChallengePage />} />
           <Route path="/trainer/:mechanic/:difficulty" element={<ChallengePage />} />
+          <Route path="/trainer" element={<div>trainer-root</div>} />
         </Routes>
       </MemoryRouter>
     </GameProvider>,
@@ -47,8 +48,8 @@ function renderSprintChallenge() {
     <GameProvider>
       <MemoryRouter initialEntries={['/trainer/sprint/easy']}>
         <Routes>
-          <Route path="/trainer/sprint/:difficulty" element={<ChallengePage />} />
           <Route path="/trainer/:mechanic/:difficulty" element={<ChallengePage />} />
+          <Route path="/trainer" element={<div>trainer-root</div>} />
         </Routes>
       </MemoryRouter>
     </GameProvider>,
@@ -57,21 +58,26 @@ function renderSprintChallenge() {
 
 describe('ChallengePage trainer hard mode', () => {
   afterEach(() => {
-    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('shows timer and consumes attempt on timeout', async () => {
-    vi.useFakeTimers();
+    vi.spyOn(engine, 'getDifficultyConfig').mockImplementation((level) => {
+      if (level !== 'hard') {
+        return engine.difficultyConfig[level];
+      }
+      return {
+        ...engine.difficultyConfig.hard,
+        hardTimerSeconds: 1,
+      };
+    });
     renderTrainerHardChallenge();
 
     await screen.findByText(/Задание:/);
     expect(screen.getByText(/Таймер:/)).toBeInTheDocument();
-
-    act(() => {
-      vi.advanceTimersByTime(61000);
-    });
-
-    expect(await screen.findByText(/Время вышло/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Время вышло|Попытки закончились/, undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 });
 

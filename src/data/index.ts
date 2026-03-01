@@ -1,5 +1,11 @@
 import { challengeById, challenges, totalChallengeCount } from './challenges';
 import { caseScenarioById, caseScenarios } from './cases';
+import {
+  adaptiveRecallDeckById,
+  adaptiveRecallDecks,
+  sprintScenarioById,
+  sprintScenarios,
+} from './mechanicTasks';
 import { buildZones, zoneOrder } from './zones';
 import { activeLearningWorldId, learningWorlds } from './worlds';
 
@@ -12,6 +18,10 @@ export {
   activeLearningWorldId,
   caseScenarios,
   caseScenarioById,
+  adaptiveRecallDecks,
+  adaptiveRecallDeckById,
+  sprintScenarios,
+  sprintScenarioById,
 };
 
 export const zones = buildZones(challenges);

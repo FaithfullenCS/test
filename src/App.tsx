@@ -20,8 +20,6 @@ export default function App() {
             <Route path="/world" element={<WorldMapPage />} />
             <Route path="/trainer" element={<TrainerPage />} />
             <Route path="/trainer/:mechanic/:difficulty" element={<ChallengePage />} />
-            <Route path="/trainer/adaptive-recall/:difficulty" element={<ChallengePage />} />
-            <Route path="/trainer/sprint/:difficulty" element={<ChallengePage />} />
             <Route path="/case/:zoneId/:scenarioId" element={<CasePage />} />
             <Route path="/zone/:zoneId" element={<ZoneIntroPage />} />
             <Route path="/zone/:zoneId/challenge/:challengeId" element={<ChallengePage />} />

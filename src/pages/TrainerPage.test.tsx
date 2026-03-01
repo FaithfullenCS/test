@@ -28,9 +28,9 @@ describe('TrainerPage', () => {
 
     await user.click(screen.getAllByRole('button', { name: 'Выбрать сложность' })[0]);
 
-    expect(screen.getByText('Easy')).toBeInTheDocument();
-    expect(screen.getByText('Medium')).toBeInTheDocument();
-    expect(screen.getByText('Hard')).toBeInTheDocument();
+    expect(screen.getAllByText('Easy').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Medium').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Hard').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: 'Старт 12 задач' }).length).toBeGreaterThan(0);
   });
 });

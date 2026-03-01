@@ -6,7 +6,14 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { caseScenarioById, challengeById, challenges, zones } from '../data';
+import {
+  adaptiveRecallDecks,
+  caseScenarioById,
+  challengeById,
+  challenges,
+  sprintScenarios,
+  zones,
+} from '../data';
 import {
   ADAPTIVE_RECALL_SESSION_SIZE,
   RETENTION_BONUS_POINTS,
@@ -24,6 +31,7 @@ import {
 import { storageApi } from '../lib/storage';
 import { seededShuffle } from '../lib/text';
 import {
+  AdaptiveRecallDeck,
   CaseScenario,
   Challenge,
   CompletedChallenge,
@@ -71,6 +79,16 @@ interface SubmitTrainerAnswerPayload {
 interface AdaptiveRecallSession {
   queue: string[];
   dueChallengeIds: string[];
+  deckId: string | null;
+  title: string;
+  brief: string;
+}
+
+interface LiquiditySprintSession {
+  queue: string[];
+  scenarioId: string | null;
+  title: string;
+  brief: string;
 }
 
 interface RecordSprintResultPayload {
@@ -96,6 +114,7 @@ interface GameContextValue {
   submitTrainerAnswer: (payload: SubmitTrainerAnswerPayload) => SubmitAnswerResult;
   buildTrainerQueue: (mechanic: GameMechanic, difficulty: DifficultyLevel, size: number) => string[];
   startAdaptiveRecallSession: (size?: number) => AdaptiveRecallSession;
+  startLiquiditySprintSession: (size?: number) => LiquiditySprintSession;
   startCaseScenario: (scenarioId: string) => CaseScenario | null;
   recordSprintResult: (payload: RecordSprintResultPayload) => SprintResult;
   recordCaseScenarioResult: (payload: RecordCaseScenarioPayload) => void;
@@ -135,6 +154,23 @@ function hashSeed(input: string): number {
     hash |= 0;
   }
   return Math.abs(hash);
+}
+
+function dayIndex(now = new Date()): number {
+  return Math.floor(now.getTime() / (24 * 60 * 60 * 1000));
+}
+
+function rotateByDay<T>(items: T[]): T | null {
+  if (items.length === 0) {
+    return null;
+  }
+  return items[dayIndex() % items.length];
+}
+
+function resolveChallengePool(ids: string[]): Challenge[] {
+  return ids
+    .map((challengeId) => challengeById[challengeId])
+    .filter((challenge): challenge is Challenge => Boolean(challenge));
 }
 
 function challengeAccuracy(record: TrainerChallengeStat | undefined): number {
@@ -252,6 +288,14 @@ function buildClassicTrainerQueue(
 
   const queue: string[] = [];
   const used = new Set<string>();
+  const shortCount = () =>
+    queue.reduce((count, challengeId) => {
+      const challenge = challengeById[challengeId];
+      if (challenge && challenge.mechanic !== 'boardroom_boss') {
+        return count + 1;
+      }
+      return count;
+    }, 0);
 
   const pushUnique = (list: Challenge[]) => {
     for (const challenge of list) {
@@ -283,7 +327,11 @@ function buildClassicTrainerQueue(
   return queue.slice(0, size);
 }
 
-function buildSprintQueue(progress: PlayerProgress, size: number): string[] {
+function buildSprintQueue(
+  progress: PlayerProgress,
+  size: number,
+  scenario?: (typeof sprintScenarios)[number] | null,
+): string[] {
   if (size <= 0) {
     return [];
   }
@@ -307,10 +355,52 @@ function buildSprintQueue(progress: PlayerProgress, size: number): string[] {
 
   const queue: string[] = [];
   const used = new Set<string>();
+  const shortCount = () =>
+    queue.reduce((count, challengeId) => {
+      const challenge = challengeById[challengeId];
+      if (challenge && challenge.mechanic !== 'boardroom_boss') {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+
+  if (scenario) {
+    const scenarioPool = resolveChallengePool([...scenario.challengeIds]);
+    const scenarioShort = scenarioPool.filter((challenge) => challenge.mechanic !== 'boardroom_boss');
+    const scenarioBoss = scenarioPool.find((challenge) => challenge.mechanic === 'boardroom_boss');
+
+    const shortFromScenario = Math.min(4, Math.max(0, size - 1));
+    for (const challenge of scenarioShort) {
+      if (shortCount() >= shortFromScenario) {
+        break;
+      }
+      queue.push(challenge.id);
+      used.add(challenge.id);
+    }
+
+    if (shortCount() < shortFromScenario) {
+      const seed = hashSeed(`sprint-scenario-${scenario.id}-${progress.lastPlayedAt}`);
+      const shuffled = seededShuffle(shortPool, seed);
+      let cursor = 0;
+      while (shortCount() < shortFromScenario) {
+        const candidate = shuffled[cursor % shuffled.length];
+        if (!used.has(candidate.id)) {
+          queue.push(candidate.id);
+          used.add(candidate.id);
+        }
+        cursor += 1;
+      }
+    }
+
+    if (scenarioBoss) {
+      queue.push(scenarioBoss.id);
+      used.add(scenarioBoss.id);
+    }
+  }
 
   const shortTarget = Math.max(0, size - 1);
   for (const challenge of weakShort) {
-    if (queue.length >= shortTarget) {
+    if (shortCount() >= shortTarget) {
       break;
     }
     if (used.has(challenge.id)) {
@@ -320,11 +410,11 @@ function buildSprintQueue(progress: PlayerProgress, size: number): string[] {
     used.add(challenge.id);
   }
 
-  if (queue.length < shortTarget) {
+  if (shortCount() < shortTarget) {
     const seed = hashSeed(`sprint-${progress.lastPlayedAt}`);
     const shuffled = seededShuffle(shortPool, seed);
     let cursor = 0;
-    while (queue.length < shortTarget) {
+    while (shortCount() < shortTarget) {
       const candidate = shuffled[cursor % shuffled.length].id;
       if (!used.has(candidate)) {
         queue.push(candidate);
@@ -345,7 +435,10 @@ function buildSprintQueue(progress: PlayerProgress, size: number): string[] {
       return parseIsoTime(stats[left.id]?.lastPlayedAt) - parseIsoTime(stats[right.id]?.lastPlayedAt);
     })[0];
 
-  queue.push(boss.id);
+  const hasBoss = queue.some((challengeId) => challengeById[challengeId]?.mechanic === 'boardroom_boss');
+  if (!hasBoss) {
+    queue.push(boss.id);
+  }
 
   return queue.slice(0, size);
 }
@@ -481,11 +574,15 @@ export function GameProvider({ children }: PropsWithChildren) {
   const buildTrainerQueue = useCallback(
     (mechanic: GameMechanic, difficulty: DifficultyLevel, size: number): string[] => {
       if (mechanic === 'adaptive_recall') {
-        return buildAdaptiveRecallQueue(progress, challenges, size);
+        const deck = rotateByDay(adaptiveRecallDecks);
+        const deckPool = deck ? resolveChallengePool(deck.challengeIds) : [];
+        const pool = deckPool.length > 0 ? deckPool : challenges;
+        return buildAdaptiveRecallQueue(progress, pool, size);
       }
 
       if (mechanic === 'liquidity_sprint') {
-        return buildSprintQueue(progress, size);
+        const scenario = rotateByDay(sprintScenarios);
+        return buildSprintQueue(progress, size, scenario);
       }
 
       if (mechanic === 'case_ladder') {
@@ -499,13 +596,38 @@ export function GameProvider({ children }: PropsWithChildren) {
 
   const startAdaptiveRecallSession = useCallback(
     (size = ADAPTIVE_RECALL_SESSION_SIZE): AdaptiveRecallSession => {
-      const queue = buildAdaptiveRecallQueue(progress, challenges, size);
+      const deck = rotateByDay(adaptiveRecallDecks);
+      const deckPool = deck ? resolveChallengePool(deck.challengeIds) : [];
+      const pool = deckPool.length > 0 ? deckPool : challenges;
+      const queue = buildAdaptiveRecallQueue(progress, pool, size);
       const dueChallengeIds = queue.filter((challengeId) =>
         isChallengeDue(progress.trainerStats.memoryByChallenge[challengeId]),
       );
       return {
         queue,
         dueChallengeIds,
+        deckId: deck?.id ?? null,
+        title: deck?.title ?? 'ARC: Mixed Review',
+        brief:
+          deck?.brief ??
+          'Смешанный адаптивный повтор по всему миру с акцентом на due и слабые места.',
+      };
+    },
+    [progress],
+  );
+
+  const startLiquiditySprintSession = useCallback(
+    (size = SPRINT_SESSION_SIZE): LiquiditySprintSession => {
+      const scenario = rotateByDay(sprintScenarios);
+      const queue = buildSprintQueue(progress, size, scenario);
+
+      return {
+        queue,
+        scenarioId: scenario?.id ?? null,
+        title: scenario?.title ?? 'Sprint: Mixed Pressure Test',
+        brief:
+          scenario?.brief ??
+          'Смешанный скоростной сценарий: 7 коротких задач и 1 финальный mini-boss.',
       };
     },
     [progress],
@@ -740,6 +862,7 @@ export function GameProvider({ children }: PropsWithChildren) {
     submitTrainerAnswer,
     buildTrainerQueue,
     startAdaptiveRecallSession,
+    startLiquiditySprintSession,
     startCaseScenario,
     recordSprintResult,
     recordCaseScenarioResult,

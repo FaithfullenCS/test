@@ -111,6 +111,22 @@ export interface CaseScenario {
   steps: [string, string, string];
 }
 
+export interface AdaptiveRecallDeck {
+  id: string;
+  zoneId: ZoneId;
+  title: string;
+  brief: string;
+  challengeIds: string[];
+}
+
+export interface SprintScenario {
+  id: string;
+  zoneId: ZoneId;
+  title: string;
+  brief: string;
+  challengeIds: [string, string, string, string, string, string, string, string];
+}
+
 export interface CaseScenarioProgress {
   scenarioId: string;
   plays: number;
