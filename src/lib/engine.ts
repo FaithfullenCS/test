@@ -6,6 +6,7 @@ import {
   DifficultyConfig,
   DifficultyLevel,
   GameMechanic,
+  PlayableWorldId,
   PlayerProgress,
   PlayMode,
   ScoreResult,
@@ -418,7 +419,7 @@ export function isZoneComplete(
 export function computeAccuracyByZone(
   zones: ZoneConfig[],
   completedChallenges: Record<string, CompletedChallenge>,
-): Record<ZoneId, number> {
+): Partial<Record<ZoneId, number>> {
   return zones.reduce((accumulator, zone) => {
     accumulator[zone.id] = calculateZoneAccuracy(
       zone.id,
@@ -426,23 +427,23 @@ export function computeAccuracyByZone(
       zone.challengeIds,
     );
     return accumulator;
-  }, {} as Record<ZoneId, number>);
+  }, {} as Partial<Record<ZoneId, number>>);
 }
 
 export function computeBadges(
   zones: ZoneConfig[],
-  accuracyByZone: Record<ZoneId, number>,
-): Record<ZoneId, ZoneBadge> {
+  accuracyByZone: Partial<Record<ZoneId, number>>,
+): Partial<Record<ZoneId, ZoneBadge>> {
   return zones.reduce((accumulator, zone) => {
-    accumulator[zone.id] = badgeByAccuracy(accuracyByZone[zone.id]);
+    accumulator[zone.id] = badgeByAccuracy(accuracyByZone[zone.id] ?? 0);
     return accumulator;
-  }, {} as Record<ZoneId, ZoneBadge>);
+  }, {} as Partial<Record<ZoneId, ZoneBadge>>);
 }
 
 export function computeUnlockedZones(
   zones: ZoneConfig[],
   completedChallenges: Record<string, CompletedChallenge>,
-  accuracyByZone: Record<ZoneId, number>,
+  accuracyByZone: Partial<Record<ZoneId, number>>,
 ): Set<ZoneId> {
   const unlocked = new Set<ZoneId>();
 
@@ -473,28 +474,25 @@ export function computeUnlockedZones(
   return unlocked;
 }
 
-export function buildInitialProgress(firstZone: ZoneId): PlayerProgress {
-  const zeroAccuracy = {
-    gate_of_flow: 0,
-    operations_quarter: 0,
-    finance_harbor: 0,
-    investment_factory: 0,
-    council_hall: 0,
-  };
+export function buildInitialProgress(worldId: PlayableWorldId, zoneOrder: ZoneId[]): PlayerProgress {
+  const firstZone = zoneOrder[0];
+  const zeroAccuracy = zoneOrder.reduce((accumulator, zoneId) => {
+    accumulator[zoneId] = 0;
+    return accumulator;
+  }, {} as Partial<Record<ZoneId, number>>);
+  const zeroBadges = zoneOrder.reduce((accumulator, zoneId) => {
+    accumulator[zoneId] = 'none';
+    return accumulator;
+  }, {} as Partial<Record<ZoneId, ZoneBadge>>);
 
   return {
     version: APP_PROGRESS_VERSION,
+    worldId,
     currentZone: firstZone,
     completedChallenges: {},
     lp: 0,
     accuracyByZone: zeroAccuracy,
-    badges: {
-      gate_of_flow: 'none',
-      operations_quarter: 'none',
-      finance_harbor: 'none',
-      investment_factory: 'none',
-      council_hall: 'none',
-    },
+    badges: zeroBadges,
     streak: 0,
     lastPlayedAt: new Date().toISOString(),
     trainerStats: createEmptyTrainerStats(),

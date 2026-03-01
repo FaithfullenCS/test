@@ -1,32 +1,45 @@
-import { challengeById, challenges, totalChallengeCount } from './challenges';
-import { caseScenarioById, caseScenarios } from './cases';
+import { PlayableWorldId, WorldDataset } from '../types/game';
+import { worldCatalog } from './worlds';
 import {
-  adaptiveRecallDeckById,
-  adaptiveRecallDecks,
-  sprintScenarioById,
-  sprintScenarios,
-} from './mechanicTasks';
-import { buildZones, zoneOrder } from './zones';
-import { activeLearningWorldId, learningWorlds } from './worlds';
+  cashFlowNigeriaDataset,
+  cashFlowNigeriaMigrationMap,
+} from './worlds/cash-flow-nigeria';
+import {
+  cashFlowStatementDataset,
+  cashFlowStatementMigrationMap,
+} from './worlds/cash-flow-statement-performance';
+import { ProgressMigrationMap } from '../lib/storage';
 
-export {
-  challenges,
-  challengeById,
-  totalChallengeCount,
-  zoneOrder,
-  learningWorlds,
-  activeLearningWorldId,
-  caseScenarios,
-  caseScenarioById,
-  adaptiveRecallDecks,
-  adaptiveRecallDeckById,
-  sprintScenarios,
-  sprintScenarioById,
+const playableWorldIds = ['cash-flow-nigeria', 'cash-flow-statement-performance'] as const;
+
+const worldDatasetsById: Record<PlayableWorldId, WorldDataset> = {
+  'cash-flow-nigeria': cashFlowNigeriaDataset,
+  'cash-flow-statement-performance': cashFlowStatementDataset,
 };
 
-export const zones = buildZones(challenges);
+const worldMigrationMapById: Record<PlayableWorldId, ProgressMigrationMap> = {
+  'cash-flow-nigeria': cashFlowNigeriaMigrationMap,
+  'cash-flow-statement-performance': cashFlowStatementMigrationMap,
+};
 
-export const zoneById = zones.reduce((accumulator, zone) => {
-  accumulator[zone.id] = zone;
-  return accumulator;
-}, {} as Record<string, (typeof zones)[number]>);
+export function isPlayableWorldId(value: unknown): value is PlayableWorldId {
+  return (
+    typeof value === 'string' &&
+    playableWorldIds.includes(value as (typeof playableWorldIds)[number])
+  );
+}
+
+export function getAllPlayableWorldIds(): PlayableWorldId[] {
+  return [...playableWorldIds];
+}
+
+export function getWorldDataset(worldId: PlayableWorldId): WorldDataset {
+  return worldDatasetsById[worldId];
+}
+
+export function getWorldMigrationMap(worldId: PlayableWorldId): ProgressMigrationMap {
+  return worldMigrationMapById[worldId];
+}
+
+export { worldCatalog };
+export const learningWorlds = worldCatalog;

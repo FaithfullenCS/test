@@ -1,8 +1,6 @@
 import { CSSProperties } from 'react';
 import { badgeLabel } from '../lib/selectors';
-import { ZoneBadge, ZoneConfig, ZoneId } from '../types/game';
-
-type DistrictIcon = 'harbor' | 'factory' | 'tower' | 'bank' | 'hall';
+import { DistrictIcon, ZoneBadge, ZoneConfig, ZoneId } from '../types/game';
 
 export interface WorldMapLayout {
   x: number;

@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { totalChallengeCount } from '../data';
 import {
   badgeLabel,
   collectTopTermKeywords,
@@ -10,12 +9,12 @@ import {
 import { useGame } from '../state/GameContext';
 
 export function ResultsPage() {
-  const { progress, zones, resetProgress } = useGame();
+  const { worldId, progress, zones, challengeById, totalChallengeCount, resetProgress } = useGame();
 
   const completion = completedCount(progress);
   const accuracy = overallAccuracy(progress, totalChallengeCount);
-  const completedCampaign = isCampaignComplete(progress);
-  const topTerms = collectTopTermKeywords(progress);
+  const completedCampaign = isCampaignComplete(progress, zones);
+  const topTerms = collectTopTermKeywords(progress, challengeById);
 
   return (
     <section className="panel">
@@ -48,8 +47,8 @@ export function ResultsPage() {
         {zones.map((zone) => (
           <article key={zone.id} className="result-zone-card card-elevated">
             <h4>{zone.title}</h4>
-            <p>Точность: {progress.accuracyByZone[zone.id]}%</p>
-            <p>Медаль: {badgeLabel(progress.badges[zone.id])}</p>
+            <p>Точность: {progress.accuracyByZone[zone.id] ?? 0}%</p>
+            <p>Медаль: {badgeLabel(progress.badges[zone.id] ?? 'none')}</p>
           </article>
         ))}
       </div>
@@ -70,7 +69,7 @@ export function ResultsPage() {
       </article>
 
       <div className="result-actions">
-        <Link to="/world" className="primary-button">
+        <Link to={`/world/${worldId}`} className="primary-button">
           Продолжить кампанию
         </Link>
         <button

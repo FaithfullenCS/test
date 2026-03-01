@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { challengeById } from '../data';
 import { getDifficultyConfig, matchBossKeywords } from '../lib/engine';
 import { mechanicTitle } from '../lib/labels';
 import { seededShuffle } from '../lib/text';
@@ -31,6 +30,8 @@ function buildAnswer(challenge: Challenge, selectedOption: string, sentence: str
 export function CasePage() {
   const { zoneId, scenarioId } = useParams<{ zoneId: string; scenarioId: string }>();
   const {
+    worldId,
+    challengeById,
     unlockedZones,
     startCaseScenario,
     submitTrainerAnswer,
@@ -38,6 +39,8 @@ export function CasePage() {
   } = useGame();
 
   const scenario = scenarioId ? startCaseScenario(scenarioId) : null;
+  const mapRoute = `/world/${worldId}`;
+  const trainerRoute = `/world/${worldId}/trainer`;
 
   const [stepIndex, setStepIndex] = useState(0);
   const [attempts, setAttempts] = useState(0);
@@ -94,7 +97,7 @@ export function CasePage() {
   }, [challenge?.id]);
 
   if (!scenario || !zoneId || scenario.zoneId !== zoneId) {
-    return <Navigate to="/trainer" replace />;
+    return <Navigate to={mapRoute} replace />;
   }
 
   if (!unlockedZones.has(scenario.zoneId)) {
@@ -102,7 +105,7 @@ export function CasePage() {
       <section className="panel">
         <h2>Кейс пока закрыт</h2>
         <p>Сначала разблокируй соответствующую зону на карте.</p>
-        <Link to="/world" className="primary-button">
+        <Link to={mapRoute} className="primary-button">
           К карте
         </Link>
       </section>
@@ -114,8 +117,8 @@ export function CasePage() {
       <section className="panel">
         <h2>Кейс не найден</h2>
         <p>В сценарии отсутствуют ожидаемые шаги.</p>
-        <Link to="/trainer" className="primary-button">
-          К тренажёру
+        <Link to={mapRoute} className="primary-button">
+          К карте
         </Link>
       </section>
     );
@@ -141,10 +144,10 @@ export function CasePage() {
         </article>
 
         <div className="resolution-actions">
-          <Link className="primary-button" to="/trainer">
+          <Link className="primary-button" to={trainerRoute}>
             К тренажёру
           </Link>
-          <Link className="ghost-button" to={`/case/${scenario.zoneId}/${scenario.id}`}>
+          <Link className="ghost-button" to={`/world/${worldId}/case/${scenario.zoneId}/${scenario.id}`}>
             Переиграть кейс
           </Link>
         </div>
@@ -389,7 +392,7 @@ export function CasePage() {
             <button type="button" className="primary-button" onClick={onProceed}>
               {stepIndex + 1 < scenario.steps.length ? 'Следующий шаг' : 'К итогам кейса'}
             </button>
-            <Link className="ghost-button" to="/trainer">
+            <Link className="ghost-button" to={trainerRoute}>
               К тренажёру
             </Link>
           </div>

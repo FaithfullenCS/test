@@ -1,16 +1,18 @@
-import { Challenge, ZoneConfig, ZoneId } from '../types/game';
+import { Challenge, ZoneConfig, ZoneId } from '../../../types/game';
+
+const WORLD_ID = 'cash-flow-nigeria' as const;
 
 export const zoneOrder: ZoneId[] = [
-  'gate_of_flow',
-  'operations_quarter',
-  'finance_harbor',
-  'investment_factory',
-  'council_hall',
+  'ng_gate_of_flow',
+  'ng_operations_quarter',
+  'ng_finance_harbor',
+  'ng_investment_factory',
+  'ng_council_hall',
 ];
 
-const baseZones: Omit<ZoneConfig, 'challengeIds' | 'bossChallengeIds'>[] = [
+const baseZones: Omit<ZoneConfig, 'challengeIds' | 'bossChallengeIds' | 'worldId'>[] = [
   {
-    id: 'gate_of_flow',
+    id: 'ng_gate_of_flow',
     order: 1,
     title: 'Врата Потока',
     subtitle: 'Abstract + Introduction',
@@ -20,7 +22,7 @@ const baseZones: Omit<ZoneConfig, 'challengeIds' | 'bossChallengeIds'>[] = [
     palette: { accent: '#E1B866', shadow: '#9B7023' },
   },
   {
-    id: 'operations_quarter',
+    id: 'ng_operations_quarter',
     order: 2,
     title: 'Операционный Квартал',
     subtitle: 'Cash from Operating Activities',
@@ -30,7 +32,7 @@ const baseZones: Omit<ZoneConfig, 'challengeIds' | 'bossChallengeIds'>[] = [
     palette: { accent: '#2F6B5F', shadow: '#1E4A41' },
   },
   {
-    id: 'finance_harbor',
+    id: 'ng_finance_harbor',
     order: 3,
     title: 'Финансовая Гавань',
     subtitle: 'Cash from Financing Activities',
@@ -40,7 +42,7 @@ const baseZones: Omit<ZoneConfig, 'challengeIds' | 'bossChallengeIds'>[] = [
     palette: { accent: '#12343B', shadow: '#082126' },
   },
   {
-    id: 'investment_factory',
+    id: 'ng_investment_factory',
     order: 4,
     title: 'Инвестиционная Мануфактура',
     subtitle: 'Cash from Investing Activities',
@@ -50,7 +52,7 @@ const baseZones: Omit<ZoneConfig, 'challengeIds' | 'bossChallengeIds'>[] = [
     palette: { accent: '#C55A3D', shadow: '#8B3E2A' },
   },
   {
-    id: 'council_hall',
+    id: 'ng_council_hall',
     order: 5,
     title: 'Зал Совета',
     subtitle: 'Results + Summary + Recommendations',
@@ -76,6 +78,7 @@ export function buildZones(challenges: Challenge[]): ZoneConfig[] {
 
     return {
       ...zone,
+      worldId: WORLD_ID,
       challengeIds: zoneChallenges,
       bossChallengeIds,
     };

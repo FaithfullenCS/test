@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { totalChallengeCount } from '../data';
 import { completedCount, overallAccuracy } from '../lib/selectors';
 import { useGame } from '../state/GameContext';
 
@@ -9,9 +8,10 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const { progress } = useGame();
+  const { worldId, progress, totalChallengeCount } = useGame();
   const completion = completedCount(progress);
   const accuracy = overallAccuracy(progress, totalChallengeCount);
+  const basePath = `/world/${worldId}`;
 
   return (
     <div className="app-root">
@@ -33,29 +33,30 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       <nav className="main-nav" aria-label="Навигация">
-        <NavLink to="/" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+        <NavLink to="/" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')} end>
           Главная
         </NavLink>
         <NavLink
-          to="/world"
+          to={basePath}
           className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+          end
         >
           Карта
         </NavLink>
         <NavLink
-          to="/trainer"
+          to={`${basePath}/trainer`}
           className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
         >
           Тренажёр
         </NavLink>
         <NavLink
-          to="/profile"
+          to={`${basePath}/profile`}
           className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
         >
           Профиль
         </NavLink>
         <NavLink
-          to="/results"
+          to={`${basePath}/results`}
           className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
         >
           Итоги

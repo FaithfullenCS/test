@@ -1,17 +1,20 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { WorldMapPage } from '../pages/WorldMapPage';
-import { GameProvider } from '../state/GameContext';
+import { TestWorldProvider } from '../test-utils';
+import { PlayableWorldId } from '../types/game';
 
-function renderMap() {
+function renderMap(worldId: PlayableWorldId = 'cash-flow-nigeria') {
   return render(
-    <GameProvider>
-      <MemoryRouter>
-        <WorldMapPage />
+    <TestWorldProvider worldId={worldId}>
+      <MemoryRouter initialEntries={[`/world/${worldId}`]}>
+        <Routes>
+          <Route path="/world/:worldId" element={<WorldMapPage />} />
+        </Routes>
       </MemoryRouter>
-    </GameProvider>,
+    </TestWorldProvider>,
   );
 }
 
@@ -19,7 +22,7 @@ describe('WorldMapPage', () => {
   it('shows map title and a single detail panel', () => {
     renderMap();
 
-    expect(screen.getByText('Карта мира статьи')).toBeInTheDocument();
+    expect(screen.getByText('Карта мира: Cash Flow Quest Nigeria')).toBeInTheDocument();
     expect(screen.getAllByTestId('world-map-details')).toHaveLength(1);
   });
 
@@ -61,5 +64,12 @@ describe('WorldMapPage', () => {
 
     expect(zone1).toHaveAttribute('aria-pressed', 'false');
     expect(zone2).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('renders another world with different map theme and landmarks', () => {
+    renderMap('cash-flow-statement-performance');
+
+    expect(screen.getByText('Карта мира: Cash Flow Statement Frontier')).toBeInTheDocument();
+    expect(screen.getByText('Delta Abstract')).toBeInTheDocument();
   });
 });

@@ -1,4 +1,3 @@
-import { challengeById, zones } from '../data';
 import {
   Challenge,
   ChallengeMechanic,
@@ -6,6 +5,7 @@ import {
   PlayerProgress,
   SprintResult,
   ZoneBadge,
+  ZoneConfig,
   ZoneId,
 } from '../types/game';
 
@@ -35,12 +35,13 @@ export function zoneCompletionCount(
   }).length;
 }
 
-export function isCampaignComplete(progress: PlayerProgress): boolean {
+export function isCampaignComplete(progress: PlayerProgress, zones: ZoneConfig[]): boolean {
   return zones.every((zone) => zone.challengeIds.every((challengeId) => progress.completedChallenges[challengeId]));
 }
 
 export function nextUncompletedChallengeId(
   progress: PlayerProgress,
+  zones: ZoneConfig[],
   zoneId: ZoneId,
 ): string | null {
   const zone = zones.find((item) => item.id === zoneId);
@@ -59,6 +60,7 @@ export function nextUncompletedChallengeId(
 
 export function nextPlayableChallengeId(
   progress: PlayerProgress,
+  zones: ZoneConfig[],
   zoneId: ZoneId,
 ): string | null {
   const zone = zones.find((item) => item.id === zoneId);
@@ -78,6 +80,7 @@ export function nextPlayableChallengeId(
 
 export function nextChallengeInZone(
   progress: PlayerProgress,
+  zones: ZoneConfig[],
   zoneId: ZoneId,
   currentChallengeId: string,
 ): string | null {
@@ -93,10 +96,7 @@ export function nextChallengeInZone(
 
   for (let cursor = index + 1; cursor < zone.challengeIds.length; cursor += 1) {
     const candidate = zone.challengeIds[cursor];
-    if (
-      !progress.completedChallenges[candidate] ||
-      !progress.completedChallenges[candidate].isCorrect
-    ) {
+    if (!progress.completedChallenges[candidate] || !progress.completedChallenges[candidate].isCorrect) {
       return candidate;
     }
   }
@@ -123,7 +123,11 @@ export function completedByMechanic(progress: PlayerProgress): Record<ChallengeM
   return baseline;
 }
 
-export function collectTopTermKeywords(progress: PlayerProgress, limit = 8): string[] {
+export function collectTopTermKeywords(
+  progress: PlayerProgress,
+  challengeById: Record<string, Challenge>,
+  limit = 8,
+): string[] {
   const termRecords = Object.values(progress.completedChallenges)
     .filter((record) => record.mechanic === 'term_forge' && record.isCorrect)
     .slice(0, limit * 2);
@@ -159,10 +163,7 @@ export function badgeLabel(badge: ZoneBadge): string {
   }
 }
 
-export function latestCompletions(
-  progress: PlayerProgress,
-  limit = 10,
-): CompletedChallenge[] {
+export function latestCompletions(progress: PlayerProgress, limit = 10): CompletedChallenge[] {
   return Object.values(progress.completedChallenges)
     .sort((left, right) => right.answeredAt.localeCompare(left.answeredAt))
     .slice(0, limit);

@@ -2,18 +2,18 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
+import { TestWorldProvider } from '../test-utils';
 import { CasePage } from './CasePage';
-import { GameProvider } from '../state/GameContext';
 
 function renderCase() {
   return render(
-    <GameProvider>
-      <MemoryRouter initialEntries={['/case/gate_of_flow/gate_of_flow-case-1']}>
+    <TestWorldProvider>
+      <MemoryRouter initialEntries={['/world/cash-flow-nigeria/case/ng_gate_of_flow/ng_gate_of_flow-case-1']}>
         <Routes>
-          <Route path="/case/:zoneId/:scenarioId" element={<CasePage />} />
+          <Route path="/world/:worldId/case/:zoneId/:scenarioId" element={<CasePage />} />
         </Routes>
       </MemoryRouter>
-    </GameProvider>,
+    </TestWorldProvider>,
   );
 }
 

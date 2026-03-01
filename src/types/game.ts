@@ -1,9 +1,16 @@
 export type ZoneId =
-  | 'gate_of_flow'
-  | 'operations_quarter'
-  | 'finance_harbor'
-  | 'investment_factory'
-  | 'council_hall';
+  | 'ng_gate_of_flow'
+  | 'ng_operations_quarter'
+  | 'ng_finance_harbor'
+  | 'ng_investment_factory'
+  | 'ng_council_hall'
+  | 'cfs_abstract_delta'
+  | 'cfs_liquidity_corridor'
+  | 'cfs_financing_spine'
+  | 'cfs_investment_atrium'
+  | 'cfs_regulator_forum';
+
+export type PlayableWorldId = 'cash-flow-nigeria' | 'cash-flow-statement-performance';
 
 export type ChallengeMechanic =
   | 'term_forge'
@@ -39,6 +46,31 @@ export interface LearningWorldConfig {
   };
 }
 
+export type DistrictIcon = 'harbor' | 'factory' | 'tower' | 'bank' | 'hall';
+
+export interface WorldMapLayoutConfig {
+  x: number;
+  y: number;
+  landmark: string;
+  icon: DistrictIcon;
+  elevation: number;
+  districtTone: string;
+}
+
+export interface WorldMapTheme {
+  title: string;
+  subtitle: string;
+  layoutByZoneId: Partial<Record<ZoneId, WorldMapLayoutConfig>>;
+  environment: {
+    landmasses: [string, string, string];
+    river: string;
+    coastline: string;
+    routeShadow: string;
+    routeMain: string;
+    routeHighlight: string;
+  };
+}
+
 export interface UnlockRule {
   minAccuracy: number;
   requiresZoneCompletion: boolean;
@@ -46,6 +78,7 @@ export interface UnlockRule {
 
 export interface ZoneConfig {
   id: ZoneId;
+  worldId: PlayableWorldId;
   order: number;
   title: string;
   subtitle: string;
@@ -61,6 +94,7 @@ export interface ZoneConfig {
 
 interface BaseChallenge {
   id: string;
+  worldId: PlayableWorldId;
   zoneId: ZoneId;
   mechanic: ChallengeMechanic;
   promptEn: string;
@@ -105,6 +139,7 @@ export type Challenge =
 
 export interface CaseScenario {
   id: string;
+  worldId: PlayableWorldId;
   zoneId: ZoneId;
   title: string;
   brief: string;
@@ -113,6 +148,7 @@ export interface CaseScenario {
 
 export interface AdaptiveRecallDeck {
   id: string;
+  worldId: PlayableWorldId;
   zoneId: ZoneId;
   title: string;
   brief: string;
@@ -121,6 +157,7 @@ export interface AdaptiveRecallDeck {
 
 export interface SprintScenario {
   id: string;
+  worldId: PlayableWorldId;
   zoneId: ZoneId;
   title: string;
   brief: string;
@@ -190,11 +227,12 @@ export interface TrainerStats {
 
 export interface PlayerProgress {
   version: number;
+  worldId: PlayableWorldId;
   currentZone: ZoneId;
   completedChallenges: Record<string, CompletedChallenge>;
   lp: number;
-  accuracyByZone: Record<ZoneId, number>;
-  badges: Record<ZoneId, ZoneBadge>;
+  accuracyByZone: Partial<Record<ZoneId, number>>;
+  badges: Partial<Record<ZoneId, ZoneBadge>>;
   streak: number;
   lastPlayedAt: string;
   trainerStats: TrainerStats;
@@ -216,4 +254,20 @@ export interface StorageApi {
   saveProgress: (progress: PlayerProgress) => void;
   resetProgress: () => void;
   migrateProgress: (oldVersion: unknown) => PlayerProgress;
+}
+
+export interface WorldDataset {
+  world: LearningWorldConfig & { id: PlayableWorldId };
+  zones: ZoneConfig[];
+  zoneOrder: ZoneId[];
+  challenges: Challenge[];
+  challengeById: Record<string, Challenge>;
+  caseScenarios: CaseScenario[];
+  caseScenarioById: Record<string, CaseScenario>;
+  adaptiveRecallDecks: AdaptiveRecallDeck[];
+  adaptiveRecallDeckById: Record<string, AdaptiveRecallDeck>;
+  sprintScenarios: SprintScenario[];
+  sprintScenarioById: Record<string, SprintScenario>;
+  totalChallengeCount: number;
+  mapTheme: WorldMapTheme;
 }

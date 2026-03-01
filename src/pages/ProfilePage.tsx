@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { challengeById } from '../data';
+import { isChallengeDue } from '../lib/engine';
+import { mechanicTitle } from '../lib/labels';
 import {
   completedByMechanic,
   completedCount,
@@ -9,13 +10,11 @@ import {
   trainerAccuracy,
   trainerAccuracyByDifficulty,
 } from '../lib/selectors';
-import { isChallengeDue } from '../lib/engine';
-import { mechanicTitle } from '../lib/labels';
 import { useGame } from '../state/GameContext';
 import { ChallengeMechanic } from '../types/game';
 
 export function ProfilePage() {
-  const { progress, challenges } = useGame();
+  const { worldId, progress, challenges, challengeById } = useGame();
 
   const mechanics = completedByMechanic(progress);
   const recent = latestCompletions(progress, 8);
@@ -24,9 +23,7 @@ export function ProfilePage() {
   const trainerByDifficulty = trainerAccuracyByDifficulty(progress);
   const sprintTop = topSprintResults(progress);
 
-  const dueCount = Object.values(progress.trainerStats.memoryByChallenge).filter((memory) =>
-    isChallengeDue(memory),
-  ).length;
+  const dueCount = Object.values(progress.trainerStats.memoryByChallenge).filter((memory) => isChallengeDue(memory)).length;
 
   const caseEntries = Object.values(progress.caseProgress);
   const caseCompletions = caseEntries.reduce((sum, item) => sum + item.completions, 0);
@@ -35,9 +32,7 @@ export function ProfilePage() {
     <section className="panel">
       <header className="panel-header">
         <h2>Профиль игрока</h2>
-        <p>
-          Здесь собрана статистика по механикам, последние задания и динамика твоего перевода.
-        </p>
+        <p>Здесь собрана статистика по механикам, последние задания и динамика твоего перевода.</p>
       </header>
 
       <div className="profile-grid">
@@ -129,7 +124,7 @@ export function ProfilePage() {
       </article>
 
       <div className="result-actions">
-        <Link to="/world" className="primary-button">
+        <Link to={`/world/${worldId}`} className="primary-button">
           На карту
         </Link>
       </div>

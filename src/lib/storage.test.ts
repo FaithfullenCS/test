@@ -1,5 +1,11 @@
-import { describe, expect, it, beforeEach } from 'vitest';
-import { storageApi, storageKey } from './storage';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { getWorldDataset, getWorldMigrationMap } from '../data';
+import { createStorageApi, storageKey } from './storage';
+
+const worldId = 'cash-flow-nigeria' as const;
+const dataset = getWorldDataset(worldId);
+const migrationMap = getWorldMigrationMap(worldId);
+const storageApi = createStorageApi(worldId, dataset.zoneOrder, migrationMap);
 
 describe('storageApi', () => {
   beforeEach(() => {
@@ -7,12 +13,12 @@ describe('storageApi', () => {
   });
 
   it('returns default progress when storage is corrupted', () => {
-    window.localStorage.setItem(storageKey(), '{broken-json');
+    window.localStorage.setItem(storageKey(worldId), '{broken-json');
 
     const progress = storageApi.loadProgress();
 
     expect(progress.lp).toBe(0);
-    expect(progress.currentZone).toBe('gate_of_flow');
+    expect(progress.currentZone).toBe('ng_gate_of_flow');
     expect(progress.version).toBe(3);
     expect(progress.trainerStats.sessionsPlayed).toBe(0);
     expect(progress.trainerStats.memoryByChallenge).toEqual({});
@@ -47,7 +53,7 @@ describe('storageApi', () => {
 
     expect(migrated.version).toBe(3);
     expect(migrated.lp).toBe(44);
-    expect(migrated.currentZone).toBe('finance_harbor');
+    expect(migrated.currentZone).toBe('ng_finance_harbor');
     expect(migrated.trainerStats.answersGiven).toBe(0);
     expect(migrated.caseProgress).toEqual({});
   });

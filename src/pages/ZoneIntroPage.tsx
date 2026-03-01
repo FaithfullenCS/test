@@ -1,17 +1,18 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { nextPlayableChallengeId, zoneCompletionCount } from '../lib/selectors';
 import { mechanicTitle } from '../lib/labels';
+import { nextPlayableChallengeId, zoneCompletionCount } from '../lib/selectors';
 import { useGame } from '../state/GameContext';
 import { ChallengeMechanic } from '../types/game';
 
 export function ZoneIntroPage() {
   const { zoneId } = useParams<{ zoneId: string }>();
-  const { zones, progress, unlockedZones, setCurrentZone, getZoneChallenges } = useGame();
+  const { worldId, zones, progress, unlockedZones, setCurrentZone, getZoneChallenges } = useGame();
 
   const zone = zones.find((item) => item.id === zoneId);
+  const mapRoute = `/world/${worldId}`;
 
   if (!zone) {
-    return <Navigate to="/world" replace />;
+    return <Navigate to={mapRoute} replace />;
   }
 
   if (!unlockedZones.has(zone.id)) {
@@ -19,7 +20,7 @@ export function ZoneIntroPage() {
       <section className="panel">
         <h2>Зона пока закрыта</h2>
         <p>Нужно закончить предыдущую зону с точностью не ниже 70%.</p>
-        <Link className="primary-button" to="/world">
+        <Link className="primary-button" to={mapRoute}>
           Вернуться на карту
         </Link>
       </section>
@@ -29,17 +30,20 @@ export function ZoneIntroPage() {
   const zoneChallenges = getZoneChallenges(zone.id);
   const completion = zoneCompletionCount(progress, zone.id, zone.challengeIds);
   const accuracy = progress.accuracyByZone[zone.id] ?? 0;
-  const nextChallengeId = nextPlayableChallengeId(progress, zone.id);
+  const nextChallengeId = nextPlayableChallengeId(progress, zones, zone.id);
 
-  const mechanicStats = zoneChallenges.reduce<Record<ChallengeMechanic, number>>((accumulator, challenge) => {
-    accumulator[challenge.mechanic] = (accumulator[challenge.mechanic] ?? 0) + 1;
-    return accumulator;
-  }, {
-    term_forge: 0,
-    sentence_builder: 0,
-    context_choice: 0,
-    boardroom_boss: 0,
-  });
+  const mechanicStats = zoneChallenges.reduce<Record<ChallengeMechanic, number>>(
+    (accumulator, challenge) => {
+      accumulator[challenge.mechanic] = (accumulator[challenge.mechanic] ?? 0) + 1;
+      return accumulator;
+    },
+    {
+      term_forge: 0,
+      sentence_builder: 0,
+      context_choice: 0,
+      boardroom_boss: 0,
+    },
+  );
 
   return (
     <section className="panel">
@@ -52,9 +56,11 @@ export function ZoneIntroPage() {
       <p className="zone-description-full">{zone.description}</p>
 
       <div className="zone-meta-wrap">
-        <p>Пройдено: {completion}/{zone.challengeIds.length}</p>
+        <p>
+          Пройдено: {completion}/{zone.challengeIds.length}
+        </p>
         <p>Точность зоны: {accuracy}%</p>
-        <p>Медаль: {progress.badges[zone.id]}</p>
+        <p>Медаль: {progress.badges[zone.id] ?? 'none'}</p>
       </div>
 
       <div className="mechanics-inline">
@@ -69,18 +75,18 @@ export function ZoneIntroPage() {
         {nextChallengeId ? (
           <Link
             className="primary-button"
-            to={`/zone/${zone.id}/challenge/${nextChallengeId}`}
+            to={`/world/${worldId}/zone/${zone.id}/challenge/${nextChallengeId}`}
             onClick={() => setCurrentZone(zone.id)}
           >
             {completion === 0 ? 'Начать зону' : 'Продолжить зону'}
           </Link>
         ) : (
-          <Link className="primary-button" to="/world">
+          <Link className="primary-button" to={mapRoute}>
             Зона завершена, к карте
           </Link>
         )}
 
-        <Link className="secondary-button" to="/world">
+        <Link className="secondary-button" to={mapRoute}>
           Назад к карте
         </Link>
       </div>

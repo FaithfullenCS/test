@@ -2,57 +2,20 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ChallengePage } from './ChallengePage';
 import * as engine from '../lib/engine';
-import { GameProvider } from '../state/GameContext';
+import { TestWorldProvider } from '../test-utils';
+import { ChallengePage } from './ChallengePage';
 
-function renderTrainerHardChallenge() {
+function renderTrainerChallenge(path: string) {
   return render(
-    <GameProvider>
-      <MemoryRouter initialEntries={['/trainer/term_forge/hard']}>
+    <TestWorldProvider>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/trainer/:mechanic/:difficulty" element={<ChallengePage />} />
+          <Route path="/world/:worldId/trainer/:mechanic/:difficulty" element={<ChallengePage />} />
+          <Route path="/world/:worldId/trainer" element={<div>trainer-root</div>} />
         </Routes>
       </MemoryRouter>
-    </GameProvider>,
-  );
-}
-
-function renderTrainerMediumChallenge() {
-  return render(
-    <GameProvider>
-      <MemoryRouter initialEntries={['/trainer/term_forge/medium']}>
-        <Routes>
-          <Route path="/trainer/:mechanic/:difficulty" element={<ChallengePage />} />
-        </Routes>
-      </MemoryRouter>
-    </GameProvider>,
-  );
-}
-
-function renderAdaptiveRecallChallenge() {
-  return render(
-    <GameProvider>
-      <MemoryRouter initialEntries={['/trainer/adaptive-recall/medium']}>
-        <Routes>
-          <Route path="/trainer/:mechanic/:difficulty" element={<ChallengePage />} />
-          <Route path="/trainer" element={<div>trainer-root</div>} />
-        </Routes>
-      </MemoryRouter>
-    </GameProvider>,
-  );
-}
-
-function renderSprintChallenge() {
-  return render(
-    <GameProvider>
-      <MemoryRouter initialEntries={['/trainer/sprint/easy']}>
-        <Routes>
-          <Route path="/trainer/:mechanic/:difficulty" element={<ChallengePage />} />
-          <Route path="/trainer" element={<div>trainer-root</div>} />
-        </Routes>
-      </MemoryRouter>
-    </GameProvider>,
+    </TestWorldProvider>,
   );
 }
 
@@ -71,7 +34,8 @@ describe('ChallengePage trainer hard mode', () => {
         hardTimerSeconds: 1,
       };
     });
-    renderTrainerHardChallenge();
+
+    renderTrainerChallenge('/world/cash-flow-nigeria/trainer/term_forge/hard');
 
     await screen.findByText(/Задание:/);
     expect(screen.getByText(/Таймер:/)).toBeInTheDocument();
@@ -84,7 +48,7 @@ describe('ChallengePage trainer hard mode', () => {
 describe('ChallengePage trainer flow', () => {
   it('keeps the same question after submit until explicit next action', async () => {
     const user = userEvent.setup();
-    renderTrainerMediumChallenge();
+    renderTrainerChallenge('/world/cash-flow-nigeria/trainer/term_forge/medium');
 
     await screen.findByText(/Задание:/);
     const promptBefore = screen.getByText(/Задание:/).textContent;
@@ -105,19 +69,19 @@ describe('ChallengePage trainer flow', () => {
     expect(screen.getByText(/Сохранено в профиле:/)).toBeInTheDocument();
   });
 
-  it('starts adaptive recall session with dedicated mechanic title', async () => {
-    renderAdaptiveRecallChallenge();
+  it('starts adaptive recall session with themed packet info', async () => {
+    renderTrainerChallenge('/world/cash-flow-nigeria/trainer/adaptive-recall/medium');
 
     await screen.findByText(/Задание:/);
-    expect(screen.getByText('Adaptive Recall Cycle')).toBeInTheDocument();
+    expect(screen.getByText(/Пакет:/)).toBeInTheDocument();
     expect(screen.getByText(/Сессия:\s*1\s*\/\s*12/)).toBeInTheDocument();
   });
 
   it('shows sprint timer chip in liquidity sprint mode', async () => {
-    renderSprintChallenge();
+    renderTrainerChallenge('/world/cash-flow-nigeria/trainer/sprint/easy');
 
     await screen.findByText(/Задание:/);
     expect(screen.getByText(/Спринт:/)).toBeInTheDocument();
-    expect(screen.getByText('Liquidity Sprint')).toBeInTheDocument();
+    expect(screen.getByText(/Пакет:/)).toBeInTheDocument();
   });
 });

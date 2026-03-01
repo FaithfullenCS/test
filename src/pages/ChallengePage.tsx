@@ -1,6 +1,5 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { challengeById, totalChallengeCount } from '../data';
 import {
   ADAPTIVE_RECALL_SESSION_SIZE,
   SPRINT_DURATION_SECONDS,
@@ -119,7 +118,10 @@ export function ChallengePage() {
   }>();
   const navigate = useNavigate();
   const {
+    worldId,
     zones,
+    challengeById,
+    totalChallengeCount,
     progress,
     submitAnswer,
     submitTrainerAnswer,
@@ -234,8 +236,8 @@ export function ChallengePage() {
     if (!challenge || !activeZone || isTrainerMode) {
       return null;
     }
-    return nextChallengeInZone(progress, activeZone.id, challenge.id);
-  }, [challenge, activeZone, isTrainerMode, progress]);
+    return nextChallengeInZone(progress, zones, activeZone.id, challenge.id);
+  }, [challenge, activeZone, isTrainerMode, progress, zones]);
 
   useEffect(() => {
     if (!challenge) {
@@ -404,15 +406,15 @@ export function ChallengePage() {
   }, [isResolved, timeLeft, hardTimerEnabled]);
 
   if (invalidTrainerRoute) {
-    return <Navigate to="/trainer" replace />;
+    return <Navigate to={`/world/${worldId}/trainer`} replace />;
   }
 
   if (unsupportedTrainerRoute) {
-    return <Navigate to="/trainer" replace />;
+    return <Navigate to={`/world/${worldId}/trainer`} replace />;
   }
 
   if (invalidCampaignRoute) {
-    return <Navigate to="/world" replace />;
+    return <Navigate to={`/world/${worldId}`} replace />;
   }
 
   if (isTrainerMode && trainerFinished) {
@@ -450,7 +452,7 @@ export function ChallengePage() {
           >
             {trainerMechanic === 'liquidity_sprint' ? 'Ещё один спринт' : `Ещё ${sessionSize} задач`}
           </button>
-          <Link className="ghost-button" to="/trainer">
+          <Link className="ghost-button" to={`/world/${worldId}/trainer`}>
             Сменить механику или сложность
           </Link>
         </div>
@@ -618,16 +620,16 @@ export function ChallengePage() {
     }
 
     if (!activeZone) {
-      navigate('/world');
+      navigate(`/world/${worldId}`);
       return;
     }
 
     if (nextChallengeId) {
-      navigate(`/zone/${activeZone.id}/challenge/${nextChallengeId}`);
+      navigate(`/world/${worldId}/zone/${activeZone.id}/challenge/${nextChallengeId}`);
       return;
     }
 
-    navigate(`/zone/${activeZone.id}`);
+    navigate(`/world/${worldId}/zone/${activeZone.id}`);
   };
 
   const selectFragment = (fragment: string) => {
@@ -901,13 +903,13 @@ export function ChallengePage() {
                   : 'Вернуться в зону'}
             </button>
             {isTrainerMode ? (
-              <Link className="ghost-button" to="/trainer">
+              <Link className="ghost-button" to={`/world/${worldId}/trainer`}>
                 К выбору тренажёра
               </Link>
             ) : (
               <Link
                 className="ghost-button"
-                to={`/zone/${activeZone.id}`}
+                to={`/world/${worldId}/zone/${activeZone.id}`}
                 onClick={() => setCurrentZone(activeZone.id)}
               >
                 К обзору зоны

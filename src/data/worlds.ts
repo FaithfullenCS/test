@@ -1,38 +1,36 @@
 import { LearningWorldConfig } from '../types/game';
-import { totalChallengeCount } from './challenges';
-import { zoneOrder } from './zones';
 
-export const learningWorlds: LearningWorldConfig[] = [
+export const worldCatalog: LearningWorldConfig[] = [
   {
     id: 'cash-flow-nigeria',
     title: 'Cash Flow Quest: Nigeria',
     subtitle: 'EN -> RU Financial Translation Campaign',
     description:
-      'Полный игровой мир по статье о влиянии cash flow на финансовые результаты компаний food and beverage.',
+      'Полный игровой мир по ранней кампании cash flow и финансовых результатов компаний food and beverage.',
     focus: 'Отчётность, cash flow, финансовый менеджмент',
-    zoneCount: zoneOrder.length,
-    challengeCount: totalChallengeCount,
+    zoneCount: 5,
+    challengeCount: 120,
     availability: 'available',
-    route: '/world',
+    route: '/world/cash-flow-nigeria',
     palette: {
       accent: '#2F6B5F',
       shadow: '#1B4239',
     },
   },
   {
-    id: 'startup-unit-economics',
-    title: 'Startup Unit Economics',
-    subtitle: 'Upcoming World',
+    id: 'cash-flow-statement-performance',
+    title: 'Cash Flow Statement Frontier',
+    subtitle: 'EN -> RU Research Campaign (2007-2011)',
     description:
-      'Будущий мир по переводу материалов о CAC, LTV, burn rate и сценариях роста стартапа.',
-    focus: 'Метрики стартапа, юнит-экономика, рост',
-    zoneCount: 6,
-    challengeCount: 144,
-    availability: 'coming_soon',
-    route: null,
+      'Полный игровой мир по тексту "Effect of Cash Flow Statement on Performance" с фокусом на ROTA, OPCF, INVCF и FINCF.',
+    focus: 'Cash flow statement, ROTA, panel regression, financial performance',
+    zoneCount: 5,
+    challengeCount: 120,
+    availability: 'available',
+    route: '/world/cash-flow-statement-performance',
     palette: {
-      accent: '#C55A3D',
-      shadow: '#8B3E2A',
+      accent: '#1F6A7A',
+      shadow: '#13424D',
     },
   },
   {
@@ -52,7 +50,4 @@ export const learningWorlds: LearningWorldConfig[] = [
     },
   },
 ];
-
-export const activeLearningWorldId = learningWorlds.find(
-  (world) => world.availability === 'available',
-)?.id;
+export const learningWorlds = worldCatalog;

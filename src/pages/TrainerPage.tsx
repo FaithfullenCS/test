@@ -1,16 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { adaptiveRecallDecks, caseScenarios, sprintScenarios, zones } from '../data';
+import { isChallengeDue } from '../lib/engine';
 import {
   difficultyDescription,
   difficultyTitle,
   mechanicDescription,
   mechanicTitle,
 } from '../lib/labels';
-import { isChallengeDue } from '../lib/engine';
 import { topSprintResults } from '../lib/selectors';
 import { useGame } from '../state/GameContext';
-import { Challenge, DifficultyLevel, TrainerModeMechanic, ZoneId } from '../types/game';
+import { Challenge, DifficultyLevel, TrainerModeMechanic, ZoneConfig, ZoneId } from '../types/game';
 
 const classicMechanics: Challenge['mechanic'][] = [
   'term_forge',
@@ -45,19 +44,24 @@ const advancedModes: Array<{
   },
 ];
 
-function zoneTitle(zoneId: ZoneId): string {
+function zoneTitle(zoneId: ZoneId, zones: ZoneConfig[]): string {
   return zones.find((zone) => zone.id === zoneId)?.title ?? zoneId;
 }
 
 export function TrainerPage() {
   const [openedCard, setOpenedCard] = useState<string | null>(null);
-  const { progress, unlockedZones } = useGame();
+  const {
+    worldId,
+    zones,
+    progress,
+    unlockedZones,
+    caseScenarios,
+    adaptiveRecallDecks,
+    sprintScenarios,
+  } = useGame();
 
   const dueCount = useMemo(
-    () =>
-      Object.values(progress.trainerStats.memoryByChallenge).filter((memory) =>
-        isChallengeDue(memory),
-      ).length,
+    () => Object.values(progress.trainerStats.memoryByChallenge).filter((memory) => isChallengeDue(memory)).length,
     [progress.trainerStats.memoryByChallenge],
   );
 
@@ -65,17 +69,17 @@ export function TrainerPage() {
 
   const availableCaseScenarios = useMemo(
     () => caseScenarios.filter((scenario) => unlockedZones.has(scenario.zoneId)),
-    [unlockedZones],
+    [caseScenarios, unlockedZones],
   );
 
   const availableArcDecks = useMemo(
     () => adaptiveRecallDecks.filter((deck) => unlockedZones.has(deck.zoneId)),
-    [unlockedZones],
+    [adaptiveRecallDecks, unlockedZones],
   );
 
   const availableSprintScenarios = useMemo(
     () => sprintScenarios.filter((scenario) => unlockedZones.has(scenario.zoneId)),
-    [unlockedZones],
+    [sprintScenarios, unlockedZones],
   );
 
   return (
@@ -133,11 +137,7 @@ export function TrainerPage() {
                   <h3>{mechanicTitle(mechanic)}</h3>
                   <p>{mechanicDescription(mechanic)}</p>
                   <p className="trainer-feature">{mechanicFeatures[mechanic]}</p>
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() => setOpenedCard(cardId)}
-                  >
+                  <button type="button" className="primary-button" onClick={() => setOpenedCard(cardId)}>
                     Выбрать сложность
                   </button>
                 </div>
@@ -149,17 +149,16 @@ export function TrainerPage() {
                       <article key={difficulty} className="trainer-difficulty-card">
                         <p className="trainer-difficulty-title">{difficultyTitle(difficulty)}</p>
                         <p>{difficultyDescription(difficulty)}</p>
-                        <Link className="secondary-button" to={`/trainer/${mechanic}/${difficulty}`}>
+                        <Link
+                          className="secondary-button"
+                          to={`/world/${worldId}/trainer/${mechanic}/${difficulty}`}
+                        >
                           Старт 12 задач
                         </Link>
                       </article>
                     ))}
                   </div>
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => setOpenedCard(null)}
-                  >
+                  <button type="button" className="ghost-button" onClick={() => setOpenedCard(null)}>
                     Назад к обзору
                   </button>
                 </div>
@@ -188,11 +187,7 @@ export function TrainerPage() {
                       ? `Тематических ARC-пакетов: ${availableArcDecks.length}`
                       : `Тематических Sprint-сценариев: ${availableSprintScenarios.length}`}
                   </p>
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() => setOpenedCard(mode.id)}
-                  >
+                  <button type="button" className="primary-button" onClick={() => setOpenedCard(mode.id)}>
                     Выбрать сложность
                   </button>
                 </div>
@@ -204,17 +199,16 @@ export function TrainerPage() {
                       <article key={difficulty} className="trainer-difficulty-card">
                         <p className="trainer-difficulty-title">{difficultyTitle(difficulty)}</p>
                         <p>{difficultyDescription(difficulty)}</p>
-                        <Link className="secondary-button" to={`/trainer/${mode.routeKey}/${difficulty}`}>
+                        <Link
+                          className="secondary-button"
+                          to={`/world/${worldId}/trainer/${mode.routeKey}/${difficulty}`}
+                        >
                           {mode.id === 'liquidity_sprint' ? 'Старт спринта' : 'Старт ARC'}
                         </Link>
                       </article>
                     ))}
                   </div>
-                  <button
-                    type="button"
-                    className="ghost-button"
-                    onClick={() => setOpenedCard(null)}
-                  >
+                  <button type="button" className="ghost-button" onClick={() => setOpenedCard(null)}>
                     Назад к обзору
                   </button>
                 </div>
@@ -240,8 +234,11 @@ export function TrainerPage() {
                   {availableCaseScenarios.map((scenario) => (
                     <article key={scenario.id} className="trainer-difficulty-card">
                       <p className="trainer-difficulty-title">{scenario.title}</p>
-                      <p>{zoneTitle(scenario.zoneId)}</p>
-                      <Link className="secondary-button" to={`/case/${scenario.zoneId}/${scenario.id}`}>
+                      <p>{zoneTitle(scenario.zoneId, zones)}</p>
+                      <Link
+                        className="secondary-button"
+                        to={`/world/${worldId}/case/${scenario.zoneId}/${scenario.id}`}
+                      >
                         Запустить кейс
                       </Link>
                     </article>

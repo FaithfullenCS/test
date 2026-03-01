@@ -1,8 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { useEffect, useState } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { challenges } from '../data';
-import { GameProvider, useGame } from './GameContext';
+import { getWorldDataset } from '../data';
+import { TEST_WORLD_ID, TestWorldProvider } from '../test-utils';
+import { useGame } from './GameContext';
+
+const dataset = getWorldDataset(TEST_WORLD_ID);
+const challenges = dataset.challenges;
 
 function QueueProbe() {
   const { buildTrainerQueue, submitTrainerAnswer, progress } = useGame();
@@ -67,9 +71,9 @@ describe('GameContext trainer queue', () => {
 
   it('prioritizes unseen challenges before previously seen ones', async () => {
     render(
-      <GameProvider>
+      <TestWorldProvider>
         <QueueProbe />
-      </GameProvider>,
+      </TestWorldProvider>,
     );
 
     const seenChallenge = challenges.find((item) => item.mechanic === 'term_forge');
@@ -84,9 +88,9 @@ describe('GameContext trainer queue', () => {
 
   it('updates memory boxes after adaptive recall submission', async () => {
     render(
-      <GameProvider>
+      <TestWorldProvider>
         <MemoryProbe />
-      </GameProvider>,
+      </TestWorldProvider>,
     );
 
     await waitFor(() => {

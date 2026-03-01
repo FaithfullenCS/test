@@ -7,14 +7,6 @@ import {
   useState,
 } from 'react';
 import {
-  adaptiveRecallDecks,
-  caseScenarioById,
-  challengeById,
-  challenges,
-  sprintScenarios,
-  zones,
-} from '../data';
-import {
   ADAPTIVE_RECALL_SESSION_SIZE,
   RETENTION_BONUS_POINTS,
   SPRINT_SESSION_SIZE,
@@ -28,20 +20,21 @@ import {
   scoreAnswer,
   updateMemoryStat,
 } from '../lib/engine';
-import { storageApi } from '../lib/storage';
+import { createStorageApi, ProgressMigrationMap } from '../lib/storage';
 import { seededShuffle } from '../lib/text';
 import {
   AdaptiveRecallDeck,
   CaseScenario,
   Challenge,
-  CompletedChallenge,
   DifficultyLevel,
   GameMechanic,
+  PlayableWorldId,
   PlayerProgress,
   ScoreResult,
   SprintResult,
   TrainerChallengeStat,
   TrainerModeMechanic,
+  WorldDataset,
   ZoneConfig,
   ZoneId,
 } from '../types/game';
@@ -106,8 +99,17 @@ interface RecordCaseScenarioPayload {
 }
 
 interface GameContextValue {
+  worldId: PlayableWorldId;
+  world: WorldDataset['world'];
+  mapTheme: WorldDataset['mapTheme'];
   zones: ZoneConfig[];
+  zoneOrder: ZoneId[];
   challenges: Challenge[];
+  challengeById: Record<string, Challenge>;
+  caseScenarios: CaseScenario[];
+  adaptiveRecallDecks: AdaptiveRecallDeck[];
+  sprintScenarios: WorldDataset['sprintScenarios'];
+  totalChallengeCount: number;
   progress: PlayerProgress;
   unlockedZones: Set<ZoneId>;
   submitAnswer: (payload: SubmitAnswerPayload) => SubmitAnswerResult;
@@ -127,7 +129,7 @@ interface GameContextValue {
 
 const GameContext = createContext<GameContextValue | null>(null);
 
-function recalculate(progress: PlayerProgress): PlayerProgress {
+function recalculate(progress: PlayerProgress, zones: ZoneConfig[]): PlayerProgress {
   const accuracyByZone = computeAccuracyByZone(zones, progress.completedChallenges);
   const badges = computeBadges(zones, accuracyByZone);
 
@@ -138,12 +140,15 @@ function recalculate(progress: PlayerProgress): PlayerProgress {
   };
 }
 
-function loadInitialProgress(): PlayerProgress {
+function loadInitialProgress(
+  storageApi: ReturnType<typeof createStorageApi>,
+  zones: ZoneConfig[],
+): PlayerProgress {
   const fromStorage = storageApi.loadProgress();
-  return recalculate(fromStorage);
+  return recalculate(fromStorage, zones);
 }
 
-function persist(progress: PlayerProgress): void {
+function persist(storageApi: ReturnType<typeof createStorageApi>, progress: PlayerProgress): void {
   storageApi.saveProgress(progress);
 }
 
@@ -167,7 +172,7 @@ function rotateByDay<T>(items: T[]): T | null {
   return items[dayIndex() % items.length];
 }
 
-function resolveChallengePool(ids: string[]): Challenge[] {
+function resolveChallengePool(challengeById: Record<string, Challenge>, ids: string[]): Challenge[] {
   return ids
     .map((challengeId) => challengeById[challengeId])
     .filter((challenge): challenge is Challenge => Boolean(challenge));
@@ -193,7 +198,7 @@ function buildCompletionRecord(
   attempt: number,
   hintUsed: boolean,
   score: ScoreResult,
-): CompletedChallenge {
+): PlayerProgress['completedChallenges'][string] {
   return {
     challengeId: challenge.id,
     zoneId: challenge.zoneId,
@@ -258,6 +263,8 @@ function cloneProgress(progress: PlayerProgress): PlayerProgress {
 }
 
 function buildClassicTrainerQueue(
+  challenges: Challenge[],
+  challengeById: Record<string, Challenge>,
   progress: PlayerProgress,
   mechanic: Challenge['mechanic'],
   difficulty: DifficultyLevel,
@@ -282,8 +289,7 @@ function buildClassicTrainerQueue(
   });
 
   const stale = [...seen].sort(
-    (left, right) =>
-      parseIsoTime(stats[left.id]?.lastPlayedAt) - parseIsoTime(stats[right.id]?.lastPlayedAt),
+    (left, right) => parseIsoTime(stats[left.id]?.lastPlayedAt) - parseIsoTime(stats[right.id]?.lastPlayedAt),
   );
 
   const queue: string[] = [];
@@ -328,9 +334,11 @@ function buildClassicTrainerQueue(
 }
 
 function buildSprintQueue(
+  challenges: Challenge[],
+  challengeById: Record<string, Challenge>,
   progress: PlayerProgress,
   size: number,
-  scenario?: (typeof sprintScenarios)[number] | null,
+  scenario?: WorldDataset['sprintScenarios'][number] | null,
 ): string[] {
   if (size <= 0) {
     return [];
@@ -365,7 +373,7 @@ function buildSprintQueue(
     }, 0);
 
   if (scenario) {
-    const scenarioPool = resolveChallengePool([...scenario.challengeIds]);
+    const scenarioPool = resolveChallengePool(challengeById, [...scenario.challengeIds]);
     const scenarioShort = scenarioPool.filter((challenge) => challenge.mechanic !== 'boardroom_boss');
     const scenarioBoss = scenarioPool.find((challenge) => challenge.mechanic === 'boardroom_boss');
 
@@ -443,17 +451,42 @@ function buildSprintQueue(
   return queue.slice(0, size);
 }
 
-export function GameProvider({ children }: PropsWithChildren) {
-  const [progress, setProgress] = useState<PlayerProgress>(() => loadInitialProgress());
+interface GameProviderProps extends PropsWithChildren {
+  dataset: WorldDataset;
+  worldId: PlayableWorldId;
+  migrationMap: ProgressMigrationMap;
+}
+
+export function GameProvider({ children, dataset, worldId, migrationMap }: GameProviderProps) {
+  const {
+    world,
+    mapTheme,
+    zones,
+    zoneOrder,
+    challenges,
+    challengeById,
+    caseScenarios,
+    caseScenarioById,
+    adaptiveRecallDecks,
+    sprintScenarios,
+    totalChallengeCount,
+  } = dataset;
+
+  const storageApi = useMemo(
+    () => createStorageApi(worldId, zoneOrder, migrationMap),
+    [worldId, zoneOrder, migrationMap],
+  );
+
+  const [progress, setProgress] = useState<PlayerProgress>(() => loadInitialProgress(storageApi, zones));
 
   const unlockedZones = useMemo(
     () => computeUnlockedZones(zones, progress.completedChallenges, progress.accuracyByZone),
-    [progress.completedChallenges, progress.accuracyByZone],
+    [zones, progress.completedChallenges, progress.accuracyByZone],
   );
 
   const getZoneChallenges = useCallback(
     (zoneId: ZoneId) => challenges.filter((challenge) => challenge.zoneId === zoneId),
-    [],
+    [challenges],
   );
 
   const isChallengeCompleted = useCallback(
@@ -468,16 +501,19 @@ export function GameProvider({ children }: PropsWithChildren) {
       }
 
       setProgress((previous) => {
-        const next = recalculate({
-          ...previous,
-          currentZone: zoneId,
-          lastPlayedAt: new Date().toISOString(),
-        });
-        persist(next);
+        const next = recalculate(
+          {
+            ...previous,
+            currentZone: zoneId,
+            lastPlayedAt: new Date().toISOString(),
+          },
+          zones,
+        );
+        persist(storageApi, next);
         return next;
       });
     },
-    [unlockedZones],
+    [storageApi, unlockedZones, zones],
   );
 
   const submitAnswer = useCallback(
@@ -506,7 +542,7 @@ export function GameProvider({ children }: PropsWithChildren) {
         }
 
         if (score.isCorrect) {
-          const canAward = !existing || (existing && !existing.isCorrect);
+          const canAward = !existing || !existing.isCorrect;
           if (canAward) {
             streak = draft.streak + 1;
             streakBonus = computeStreakBonus(streak);
@@ -536,10 +572,13 @@ export function GameProvider({ children }: PropsWithChildren) {
           }
         }
 
-        const recalculated = recalculate({
-          ...draft,
-          lastPlayedAt: new Date().toISOString(),
-        });
+        const recalculated = recalculate(
+          {
+            ...draft,
+            lastPlayedAt: new Date().toISOString(),
+          },
+          zones,
+        );
 
         const newlyUnlocked = computeUnlockedZones(
           zones,
@@ -551,7 +590,7 @@ export function GameProvider({ children }: PropsWithChildren) {
           recalculated.currentZone = zones[0].id;
         }
 
-        persist(recalculated);
+        persist(storageApi, recalculated);
 
         outcome = {
           score,
@@ -568,36 +607,36 @@ export function GameProvider({ children }: PropsWithChildren) {
 
       return outcome;
     },
-    [],
+    [storageApi, zones],
   );
 
   const buildTrainerQueue = useCallback(
     (mechanic: GameMechanic, difficulty: DifficultyLevel, size: number): string[] => {
       if (mechanic === 'adaptive_recall') {
         const deck = rotateByDay(adaptiveRecallDecks);
-        const deckPool = deck ? resolveChallengePool(deck.challengeIds) : [];
+        const deckPool = deck ? resolveChallengePool(challengeById, deck.challengeIds) : [];
         const pool = deckPool.length > 0 ? deckPool : challenges;
         return buildAdaptiveRecallQueue(progress, pool, size);
       }
 
       if (mechanic === 'liquidity_sprint') {
         const scenario = rotateByDay(sprintScenarios);
-        return buildSprintQueue(progress, size, scenario);
+        return buildSprintQueue(challenges, challengeById, progress, size, scenario);
       }
 
       if (mechanic === 'case_ladder') {
         return [];
       }
 
-      return buildClassicTrainerQueue(progress, mechanic, difficulty, size);
+      return buildClassicTrainerQueue(challenges, challengeById, progress, mechanic, difficulty, size);
     },
-    [progress],
+    [adaptiveRecallDecks, challengeById, challenges, progress, sprintScenarios],
   );
 
   const startAdaptiveRecallSession = useCallback(
     (size = ADAPTIVE_RECALL_SESSION_SIZE): AdaptiveRecallSession => {
       const deck = rotateByDay(adaptiveRecallDecks);
-      const deckPool = deck ? resolveChallengePool(deck.challengeIds) : [];
+      const deckPool = deck ? resolveChallengePool(challengeById, deck.challengeIds) : [];
       const pool = deckPool.length > 0 ? deckPool : challenges;
       const queue = buildAdaptiveRecallQueue(progress, pool, size);
       const dueChallengeIds = queue.filter((challengeId) =>
@@ -613,13 +652,13 @@ export function GameProvider({ children }: PropsWithChildren) {
           'Смешанный адаптивный повтор по всему миру с акцентом на due и слабые места.',
       };
     },
-    [progress],
+    [adaptiveRecallDecks, challengeById, challenges, progress],
   );
 
   const startLiquiditySprintSession = useCallback(
     (size = SPRINT_SESSION_SIZE): LiquiditySprintSession => {
       const scenario = rotateByDay(sprintScenarios);
-      const queue = buildSprintQueue(progress, size, scenario);
+      const queue = buildSprintQueue(challenges, challengeById, progress, size, scenario);
 
       return {
         queue,
@@ -630,7 +669,7 @@ export function GameProvider({ children }: PropsWithChildren) {
           'Смешанный скоростной сценарий: 7 коротких задач и 1 финальный mini-boss.',
       };
     },
-    [progress],
+    [challengeById, challenges, progress, sprintScenarios],
   );
 
   const submitTrainerAnswer = useCallback(
@@ -721,8 +760,8 @@ export function GameProvider({ children }: PropsWithChildren) {
           now,
         );
 
-        const recalculated = recalculate(draft);
-        persist(recalculated);
+        const recalculated = recalculate(draft, zones);
+        persist(storageApi, recalculated);
 
         outcome = {
           score,
@@ -737,125 +776,141 @@ export function GameProvider({ children }: PropsWithChildren) {
 
       return outcome;
     },
-    [],
+    [storageApi, zones],
   );
 
-  const startCaseScenario = useCallback((scenarioId: string): CaseScenario | null => {
-    return caseScenarioById[scenarioId] ?? null;
-  }, []);
+  const startCaseScenario = useCallback(
+    (scenarioId: string): CaseScenario | null => caseScenarioById[scenarioId] ?? null,
+    [caseScenarioById],
+  );
 
-  const recordCaseScenarioResult = useCallback((payload: RecordCaseScenarioPayload) => {
-    setProgress((previous) => {
-      const draft = cloneProgress(previous);
-      const now = new Date().toISOString();
+  const recordCaseScenarioResult = useCallback(
+    (payload: RecordCaseScenarioPayload) => {
+      setProgress((previous) => {
+        const draft = cloneProgress(previous);
+        const now = new Date().toISOString();
 
-      const existing = draft.caseProgress[payload.scenarioId] ?? {
-        scenarioId: payload.scenarioId,
-        plays: 0,
-        completions: 0,
-        bestLp: 0,
-        bestAccuracy: 0,
-        lastPlayedAt: now,
-        lastCompletedAt: null,
-      };
+        const existing = draft.caseProgress[payload.scenarioId] ?? {
+          scenarioId: payload.scenarioId,
+          plays: 0,
+          completions: 0,
+          bestLp: 0,
+          bestAccuracy: 0,
+          lastPlayedAt: now,
+          lastCompletedAt: null,
+        };
 
-      existing.plays += 1;
-      existing.bestLp = Math.max(existing.bestLp, payload.awardedLp);
-      existing.bestAccuracy = Math.max(existing.bestAccuracy, payload.accuracy);
-      existing.lastPlayedAt = now;
+        existing.plays += 1;
+        existing.bestLp = Math.max(existing.bestLp, payload.awardedLp);
+        existing.bestAccuracy = Math.max(existing.bestAccuracy, payload.accuracy);
+        existing.lastPlayedAt = now;
 
-      if (payload.completed) {
-        existing.completions += 1;
-        existing.lastCompletedAt = now;
-      }
-
-      draft.caseProgress[payload.scenarioId] = existing;
-      draft.lastPlayedAt = now;
-
-      const recalculated = recalculate(draft);
-      persist(recalculated);
-      return recalculated;
-    });
-  }, []);
-
-  const recordSprintResult = useCallback((payload: RecordSprintResultPayload): SprintResult => {
-    let recorded: SprintResult = {
-      playedAt: payload.playedAt ?? new Date().toISOString(),
-      score: payload.score,
-      accuracy: payload.accuracy,
-      durationSec: payload.durationSec,
-      rank: 1,
-    };
-
-    setProgress((previous) => {
-      const draft = cloneProgress(previous);
-      const playedAt = payload.playedAt ?? new Date().toISOString();
-      const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
-
-      const filtered = draft.trainerStats.sprintHistory.filter((entry) => {
-        const time = new Date(entry.playedAt).getTime();
-        return Number.isFinite(time) && time >= cutoff;
-      });
-
-      const newEntry: SprintResult = {
-        playedAt,
-        score: Math.max(0, Math.round(payload.score)),
-        accuracy: Math.max(0, Math.min(100, Math.round(payload.accuracy))),
-        durationSec: Math.max(0, Math.round(payload.durationSec)),
-        rank: 0,
-      };
-
-      filtered.push(newEntry);
-
-      const ranked = filtered.sort((left, right) => {
-        if (left.score !== right.score) {
-          return right.score - left.score;
+        if (payload.completed) {
+          existing.completions += 1;
+          existing.lastCompletedAt = now;
         }
-        return right.playedAt.localeCompare(left.playedAt);
-      });
 
-      const rank = ranked.findIndex((entry) => entry === newEntry) + 1;
-      recorded = {
-        ...newEntry,
-        rank: Math.max(1, rank),
+        draft.caseProgress[payload.scenarioId] = existing;
+        draft.lastPlayedAt = now;
+
+        const recalculated = recalculate(draft, zones);
+        persist(storageApi, recalculated);
+        return recalculated;
+      });
+    },
+    [storageApi, zones],
+  );
+
+  const recordSprintResult = useCallback(
+    (payload: RecordSprintResultPayload): SprintResult => {
+      let recorded: SprintResult = {
+        playedAt: payload.playedAt ?? new Date().toISOString(),
+        score: payload.score,
+        accuracy: payload.accuracy,
+        durationSec: payload.durationSec,
+        rank: 1,
       };
 
-      draft.trainerStats.sprintHistory = ranked
-        .slice(0, 7)
-        .map((entry, index) => ({ ...entry, rank: index + 1 }));
+      setProgress((previous) => {
+        const draft = cloneProgress(previous);
+        const playedAt = payload.playedAt ?? new Date().toISOString();
+        const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
 
-      draft.lastPlayedAt = playedAt;
+        const filtered = draft.trainerStats.sprintHistory.filter((entry) => {
+          const time = new Date(entry.playedAt).getTime();
+          return Number.isFinite(time) && time >= cutoff;
+        });
 
-      const recalculated = recalculate(draft);
-      persist(recalculated);
-      return recalculated;
-    });
+        const newEntry: SprintResult = {
+          playedAt,
+          score: Math.max(0, Math.round(payload.score)),
+          accuracy: Math.max(0, Math.min(100, Math.round(payload.accuracy))),
+          durationSec: Math.max(0, Math.round(payload.durationSec)),
+          rank: 0,
+        };
 
-    return recorded;
-  }, []);
+        filtered.push(newEntry);
+
+        const ranked = filtered.sort((left, right) => {
+          if (left.score !== right.score) {
+            return right.score - left.score;
+          }
+          return right.playedAt.localeCompare(left.playedAt);
+        });
+
+        const rank = ranked.findIndex((entry) => entry === newEntry) + 1;
+        recorded = {
+          ...newEntry,
+          rank: Math.max(1, rank),
+        };
+
+        draft.trainerStats.sprintHistory = ranked
+          .slice(0, 7)
+          .map((entry, index) => ({ ...entry, rank: index + 1 }));
+
+        draft.lastPlayedAt = playedAt;
+
+        const recalculated = recalculate(draft, zones);
+        persist(storageApi, recalculated);
+        return recalculated;
+      });
+
+      return recorded;
+    },
+    [storageApi, zones],
+  );
 
   const recordTrainerSessionResult = useCallback(() => {
     setProgress((previous) => {
       const draft = cloneProgress(previous);
       draft.trainerStats.sessionsPlayed += 1;
       draft.lastPlayedAt = new Date().toISOString();
-      const recalculated = recalculate(draft);
-      persist(recalculated);
+      const recalculated = recalculate(draft, zones);
+      persist(storageApi, recalculated);
       return recalculated;
     });
-  }, []);
+  }, [storageApi, zones]);
 
   const resetProgress = useCallback(() => {
     storageApi.resetProgress();
-    const initial = buildInitialProgress(zones[0].id);
-    const next = recalculate(initial);
-    persist(next);
+    const initial = buildInitialProgress(worldId, zoneOrder);
+    const next = recalculate(initial, zones);
+    persist(storageApi, next);
     setProgress(next);
-  }, []);
+  }, [storageApi, worldId, zoneOrder, zones]);
 
   const value: GameContextValue = {
+    worldId,
+    world,
+    mapTheme,
     zones,
+    zoneOrder,
     challenges,
+    challengeById,
+    caseScenarios,
+    adaptiveRecallDecks,
+    sprintScenarios,
+    totalChallengeCount,
     progress,
     unlockedZones,
     submitAnswer,
@@ -885,6 +940,7 @@ export function useGame(): GameContextValue {
 }
 
 export function useChallenge(challengeId: string): Challenge {
+  const { challengeById } = useGame();
   const challenge = challengeById[challengeId];
   if (!challenge) {
     throw new Error(`Challenge ${challengeId} not found`);

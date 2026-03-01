@@ -5,7 +5,9 @@ import {
   SentenceBuilderChallenge,
   TermForgeChallenge,
   ZoneId,
-} from '../types/game';
+} from '../../../types/game';
+
+const WORLD_ID = 'cash-flow-nigeria' as const;
 
 interface TermSeed {
   promptEn: string;
@@ -63,6 +65,7 @@ function rotateOptions(
 function buildTermChallenges(zoneId: ZoneId, seeds: TermSeed[]): TermForgeChallenge[] {
   return seeds.map((seed, index) => ({
     id: `${zoneId}-term-${index + 1}`,
+    worldId: WORLD_ID,
     zoneId,
     mechanic: 'term_forge',
     promptEn: seed.promptEn,
@@ -84,6 +87,7 @@ function buildSentenceChallenges(
 ): SentenceBuilderChallenge[] {
   return seeds.map((seed, index) => ({
     id: `${zoneId}-sentence-${index + 1}`,
+    worldId: WORLD_ID,
     zoneId,
     mechanic: 'sentence_builder',
     promptEn: seed.promptEn,
@@ -102,6 +106,7 @@ function buildContextChallenges(
 ): ContextChoiceChallenge[] {
   return seeds.map((seed, index) => ({
     id: `${zoneId}-context-${index + 1}`,
+    worldId: WORLD_ID,
     zoneId,
     mechanic: 'context_choice',
     contextEn: seed.contextEn,
@@ -118,6 +123,7 @@ function buildContextChallenges(
 function buildBossChallenges(zoneId: ZoneId, seeds: BossSeed[]): BoardroomBossChallenge[] {
   return seeds.map((seed, index) => ({
     id: `${zoneId}-boss-${index + 1}`,
+    worldId: WORLD_ID,
     zoneId,
     mechanic: 'boardroom_boss',
     promptEn: seed.promptEn,
@@ -132,8 +138,8 @@ function buildBossChallenges(zoneId: ZoneId, seeds: BossSeed[]): BoardroomBossCh
   }));
 }
 
-const zoneSeeds: Record<ZoneId, ZoneSeeds> = {
-  gate_of_flow: {
+const zoneSeeds: Record<string, ZoneSeeds> = {
+  ng_gate_of_flow: {
     term: [
       {
         promptEn: 'cash flow',
@@ -437,7 +443,7 @@ const zoneSeeds: Record<ZoneId, ZoneSeeds> = {
       },
     ],
   },
-  operations_quarter: {
+  ng_operations_quarter: {
     term: [
       {
         promptEn: 'cash inflows',
@@ -733,7 +739,7 @@ const zoneSeeds: Record<ZoneId, ZoneSeeds> = {
       },
     ],
   },
-  finance_harbor: {
+  ng_finance_harbor: {
     term: [
       {
         promptEn: 'external financing',
@@ -1032,7 +1038,7 @@ const zoneSeeds: Record<ZoneId, ZoneSeeds> = {
       },
     ],
   },
-  investment_factory: {
+  ng_investment_factory: {
     term: [
       {
         promptEn: 'long-term assets',
@@ -1311,7 +1317,7 @@ const zoneSeeds: Record<ZoneId, ZoneSeeds> = {
       },
     ],
   },
-  council_hall: {
+  ng_council_hall: {
     term: [
       {
         promptEn: 'regression analysis',
@@ -1599,11 +1605,11 @@ const zoneSeeds: Record<ZoneId, ZoneSeeds> = {
 };
 
 const zoneIds: ZoneId[] = [
-  'gate_of_flow',
-  'operations_quarter',
-  'finance_harbor',
-  'investment_factory',
-  'council_hall',
+  'ng_gate_of_flow',
+  'ng_operations_quarter',
+  'ng_finance_harbor',
+  'ng_investment_factory',
+  'ng_council_hall',
 ];
 
 export const challenges: Challenge[] = zoneIds.flatMap((zoneId) => {

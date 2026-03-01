@@ -1,19 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { challenges } from '../data/challenges';
+import { getWorldDataset } from '../data';
+import { BoardroomBossChallenge } from '../types/game';
 import {
-  applyHintPenalty,
   applyDifficultyMultiplier,
-  buildAdaptiveRecallQueue,
+  applyHintPenalty,
   basePointsForAttempt,
+  buildAdaptiveRecallQueue,
   buildInitialProgress,
-  computeSprintScore,
   computeAccuracyByZone,
+  computeSprintScore,
   computeUnlockedZones,
   scoreAnswer,
   updateMemoryStat,
 } from './engine';
-import { buildZones } from '../data/zones';
-import { BoardroomBossChallenge } from '../types/game';
+
+const dataset = getWorldDataset('cash-flow-nigeria');
+const { challenges, zones, zoneOrder } = dataset;
 
 describe('engine', () => {
   it('scores points by attempt', () => {
@@ -64,22 +66,8 @@ describe('engine', () => {
       return;
     }
 
-    const easyResult = scoreAnswer(
-      challenge.correctAnswer,
-      challenge,
-      1,
-      false,
-      'easy',
-      'trainer',
-    );
-    const hardResult = scoreAnswer(
-      challenge.correctAnswer,
-      challenge,
-      1,
-      false,
-      'hard',
-      'trainer',
-    );
+    const easyResult = scoreAnswer(challenge.correctAnswer, challenge, 1, false, 'easy', 'trainer');
+    const hardResult = scoreAnswer(challenge.correctAnswer, challenge, 1, false, 'hard', 'trainer');
 
     expect(easyResult.awardedLp).toBe(8);
     expect(hardResult.awardedLp).toBe(13);
@@ -88,7 +76,8 @@ describe('engine', () => {
   it('uses different boardroom thresholds for easy/medium/hard', () => {
     const challenge: BoardroomBossChallenge = {
       id: 'test-boss',
-      zoneId: 'gate_of_flow',
+      worldId: 'cash-flow-nigeria',
+      zoneId: 'ng_gate_of_flow',
       mechanic: 'boardroom_boss',
       promptEn: 'Test boss prompt',
       correctAnswer: 'эталон',
@@ -107,38 +96,10 @@ describe('engine', () => {
       keywords: ['alpha'],
     };
 
-    const threeKeywords = scoreAnswer(
-      'alpha beta gamma',
-      challenge,
-      1,
-      false,
-      'easy',
-      'trainer',
-    );
-    const threeKeywordsMedium = scoreAnswer(
-      'alpha beta gamma',
-      challenge,
-      1,
-      false,
-      'medium',
-      'trainer',
-    );
-    const fourKeywordsMedium = scoreAnswer(
-      'alpha beta gamma delta',
-      challenge,
-      1,
-      false,
-      'medium',
-      'trainer',
-    );
-    const fourKeywordsHard = scoreAnswer(
-      'alpha beta gamma delta',
-      challenge,
-      1,
-      false,
-      'hard',
-      'trainer',
-    );
+    const threeKeywords = scoreAnswer('alpha beta gamma', challenge, 1, false, 'easy', 'trainer');
+    const threeKeywordsMedium = scoreAnswer('alpha beta gamma', challenge, 1, false, 'medium', 'trainer');
+    const fourKeywordsMedium = scoreAnswer('alpha beta gamma delta', challenge, 1, false, 'medium', 'trainer');
+    const fourKeywordsHard = scoreAnswer('alpha beta gamma delta', challenge, 1, false, 'hard', 'trainer');
 
     expect(threeKeywords.isCorrect).toBe(true);
     expect(threeKeywordsMedium.isCorrect).toBe(false);
@@ -147,8 +108,7 @@ describe('engine', () => {
   });
 
   it('computes unlock chain based on previous zone completion and accuracy', () => {
-    const zones = buildZones(challenges);
-    const progress = buildInitialProgress(zones[0].id);
+    const progress = buildInitialProgress('cash-flow-nigeria', zoneOrder);
 
     zones[0].challengeIds.forEach((challengeId) => {
       progress.completedChallenges[challengeId] = {
@@ -166,9 +126,9 @@ describe('engine', () => {
     const accuracyByZone = computeAccuracyByZone(zones, progress.completedChallenges);
     const unlocked = computeUnlockedZones(zones, progress.completedChallenges, accuracyByZone);
 
-    expect(unlocked.has('gate_of_flow')).toBe(true);
-    expect(unlocked.has('operations_quarter')).toBe(true);
-    expect(unlocked.has('finance_harbor')).toBe(false);
+    expect(unlocked.has('ng_gate_of_flow')).toBe(true);
+    expect(unlocked.has('ng_operations_quarter')).toBe(true);
+    expect(unlocked.has('ng_finance_harbor')).toBe(false);
   });
 
   it('updates Leitner memory stat with promotion and reset rules', () => {
@@ -198,7 +158,7 @@ describe('engine', () => {
   });
 
   it('builds adaptive recall queue prioritizing due items', () => {
-    const progress = buildInitialProgress('gate_of_flow');
+    const progress = buildInitialProgress('cash-flow-nigeria', zoneOrder);
     const sample = challenges.slice(0, 20);
 
     sample.forEach((challenge, index) => {

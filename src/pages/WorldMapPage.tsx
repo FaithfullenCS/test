@@ -5,49 +5,6 @@ import { badgeLabel, zoneCompletionCount } from '../lib/selectors';
 import { useGame } from '../state/GameContext';
 import { ZoneConfig, ZoneId } from '../types/game';
 
-const zoneMapLayout: Record<ZoneId, WorldMapLayout> = {
-  gate_of_flow: {
-    x: 10,
-    y: 76,
-    landmark: 'Бухта Истоков',
-    icon: 'harbor',
-    elevation: 2,
-    districtTone: '#6fb1c0',
-  },
-  operations_quarter: {
-    x: 30,
-    y: 57,
-    landmark: 'Квартал Операций',
-    icon: 'factory',
-    elevation: 5,
-    districtTone: '#75b78f',
-  },
-  finance_harbor: {
-    x: 50,
-    y: 34,
-    landmark: 'Финансовая Гавань',
-    icon: 'bank',
-    elevation: 7,
-    districtTone: '#7ac2d9',
-  },
-  investment_factory: {
-    x: 72,
-    y: 50,
-    landmark: 'Инвест-Верфь',
-    icon: 'tower',
-    elevation: 6,
-    districtTone: '#95b4d6',
-  },
-  council_hall: {
-    x: 89,
-    y: 23,
-    landmark: 'Мыс Совета',
-    icon: 'hall',
-    elevation: 8,
-    districtTone: '#a9b6ce',
-  },
-};
-
 function resolveDefaultSelectedZoneId(
   zones: ZoneConfig[],
   unlockedZones: Set<ZoneId>,
@@ -62,7 +19,7 @@ function resolveDefaultSelectedZoneId(
 }
 
 export function WorldMapPage() {
-  const { zones, unlockedZones, progress, setCurrentZone } = useGame();
+  const { worldId, mapTheme, zones, unlockedZones, progress, setCurrentZone } = useGame();
   const defaultSelectedZoneId = useMemo(
     () => resolveDefaultSelectedZoneId(zones, unlockedZones, progress.currentZone),
     [zones, unlockedZones, progress.currentZone],
@@ -76,20 +33,17 @@ export function WorldMapPage() {
   }, [zones, selectedZoneId, defaultSelectedZoneId]);
 
   const selectedZone = zones.find((zone) => zone.id === selectedZoneId) ?? zones[0];
-  const selectedLayout = zoneMapLayout[selectedZone.id];
+  const selectedLayout = mapTheme.layoutByZoneId[selectedZone.id] as WorldMapLayout | undefined;
   const selectedUnlocked = unlockedZones.has(selectedZone.id);
   const completion = zoneCompletionCount(progress, selectedZone.id, selectedZone.challengeIds);
   const accuracy = progress.accuracyByZone[selectedZone.id] ?? 0;
-  const badge = progress.badges[selectedZone.id];
+  const badge = progress.badges[selectedZone.id] ?? 'none';
 
   return (
     <section className="panel world-map-panel">
       <header className="panel-header">
-        <h2>Карта мира статьи</h2>
-        <p>
-          Городская карта финансовых районов: выбирай узел, изучай параметры зоны и продолжай
-          маршрут экспедиции.
-        </p>
+        <h2>{mapTheme.title}</h2>
+        <p>{mapTheme.subtitle}</p>
       </header>
 
       <div className="world-map-layout">
@@ -103,22 +57,10 @@ export function WorldMapPage() {
               preserveAspectRatio="none"
               aria-hidden="true"
             >
-              <path
-                className="env-landmass env-landmass-west"
-                d="M38 388 C111 326 224 326 296 380 C336 410 350 468 315 522 C279 577 190 607 112 583 C38 560 6 474 38 388 Z"
-              />
-              <path
-                className="env-landmass env-landmass-center"
-                d="M312 238 C383 178 503 164 590 218 C652 257 681 334 647 399 C608 475 514 513 418 498 C328 483 264 408 270 323 C274 284 287 257 312 238 Z"
-              />
-              <path
-                className="env-landmass env-landmass-east"
-                d="M620 134 C704 88 818 104 893 170 C946 217 958 297 918 362 C874 432 781 464 686 443 C596 423 530 356 534 273 C536 210 571 157 620 134 Z"
-              />
-              <path
-                className="env-river"
-                d="M0 240 C120 215 220 247 320 232 C430 216 504 144 612 156 C730 170 811 255 1000 218"
-              />
+              <path className="env-landmass env-landmass-west" d={mapTheme.environment.landmasses[0]} />
+              <path className="env-landmass env-landmass-center" d={mapTheme.environment.landmasses[1]} />
+              <path className="env-landmass env-landmass-east" d={mapTheme.environment.landmasses[2]} />
+              <path className="env-river" d={mapTheme.environment.river} />
 
               <g className="env-forest-cluster">
                 <circle cx="208" cy="418" r="16" />
@@ -143,10 +85,7 @@ export function WorldMapPage() {
                 <rect x="82" y="494" width="26" height="6" rx="2" />
               </g>
 
-              <path
-                className="env-coastline"
-                d="M24 556 C126 534 193 565 268 544 C352 521 411 564 477 546 C560 524 628 562 707 546 C787 530 859 556 964 536"
-              />
+              <path className="env-coastline" d={mapTheme.environment.coastline} />
             </svg>
 
             <svg
@@ -155,31 +94,29 @@ export function WorldMapPage() {
               preserveAspectRatio="none"
               aria-hidden="true"
             >
-              <path
-                className="route-shadow"
-                d="M100 470 C172 439 240 404 298 356 C369 296 431 236 492 212 C580 185 651 230 720 309 C791 382 850 251 890 145"
-              />
-              <path
-                className="route-main"
-                d="M100 470 C172 439 240 404 298 356 C369 296 431 236 492 212 C580 185 651 230 720 309 C791 382 850 251 890 145"
-              />
-              <path
-                className="route-highlight"
-                d="M92 500 C178 475 246 425 306 374 C382 309 458 280 526 269 C610 256 668 299 726 343 C790 392 845 296 894 203"
-              />
+              <path className="route-shadow" d={mapTheme.environment.routeShadow} />
+              <path className="route-main" d={mapTheme.environment.routeMain} />
+              <path className="route-highlight" d={mapTheme.environment.routeHighlight} />
             </svg>
 
-            {zones.map((zone) => (
-              <WorldMapCard
-                key={zone.id}
-                zone={zone}
-                unlocked={unlockedZones.has(zone.id)}
-                layout={zoneMapLayout[zone.id]}
-                badge={progress.badges[zone.id]}
-                isActive={selectedZone.id === zone.id}
-                onSelect={setSelectedZoneId}
-              />
-            ))}
+            {zones.map((zone) => {
+              const layout = mapTheme.layoutByZoneId[zone.id] as WorldMapLayout | undefined;
+              if (!layout) {
+                return null;
+              }
+
+              return (
+                <WorldMapCard
+                  key={zone.id}
+                  zone={zone}
+                  unlocked={unlockedZones.has(zone.id)}
+                  layout={layout}
+                  badge={progress.badges[zone.id] ?? 'none'}
+                  isActive={selectedZone.id === zone.id}
+                  onSelect={setSelectedZoneId}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -190,7 +127,8 @@ export function WorldMapPage() {
         >
           <header>
             <p className="zone-order">
-              Зона {selectedZone.order} · {selectedLayout.landmark}
+              Зона {selectedZone.order}
+              {selectedLayout ? ` · ${selectedLayout.landmark}` : ''}
             </p>
             <h3>{selectedZone.title}</h3>
             <p className="zone-subtitle">{selectedZone.subtitle}</p>
@@ -209,16 +147,14 @@ export function WorldMapPage() {
           <div className="world-map-details-actions">
             {selectedUnlocked ? (
               <Link
-                to={`/zone/${selectedZone.id}`}
+                to={`/world/${worldId}/zone/${selectedZone.id}`}
                 className="primary-button"
                 onClick={() => setCurrentZone(selectedZone.id)}
               >
                 Войти в зону
               </Link>
             ) : (
-              <p className="lock-note">
-                Заблокировано: завершите предыдущую зону с точностью от 70%.
-              </p>
+              <p className="lock-note">Заблокировано: завершите предыдущую зону с точностью от 70%.</p>
             )}
           </div>
         </article>

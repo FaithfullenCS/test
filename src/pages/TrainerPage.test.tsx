@@ -2,16 +2,16 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
+import { TestWorldProvider } from '../test-utils';
 import { TrainerPage } from './TrainerPage';
-import { GameProvider } from '../state/GameContext';
 
 function renderTrainer() {
   return render(
-    <GameProvider>
+    <TestWorldProvider>
       <MemoryRouter>
         <TrainerPage />
       </MemoryRouter>
-    </GameProvider>,
+    </TestWorldProvider>,
   );
 }
 

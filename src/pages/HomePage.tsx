@@ -1,8 +1,13 @@
-import { CSSProperties } from 'react';
+import { CSSProperties, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { activeLearningWorldId, learningWorlds, totalChallengeCount } from '../data';
-import { completedCount, overallAccuracy } from '../lib/selectors';
-import { useGame } from '../state/GameContext';
+import {
+  getAllPlayableWorldIds,
+  getWorldDataset,
+  getWorldMigrationMap,
+  learningWorlds,
+} from '../data';
+import { createStorageApi } from '../lib/storage';
+import { completedCount, isCampaignComplete } from '../lib/selectors';
 import { LearningWorldConfig } from '../types/game';
 
 function worldAvailabilityLabel(world: LearningWorldConfig): string {
@@ -10,11 +15,30 @@ function worldAvailabilityLabel(world: LearningWorldConfig): string {
 }
 
 export function HomePage() {
-  const { progress } = useGame();
-  const completion = completedCount(progress);
-  const accuracy = overallAccuracy(progress, totalChallengeCount);
-  const activeWorld = learningWorlds.find((world) => world.id === activeLearningWorldId);
-  const activeWorldRoute = activeWorld?.route ?? '/world';
+  const platformStats = useMemo(() => {
+    const playableWorldIds = getAllPlayableWorldIds();
+
+    return playableWorldIds.reduce(
+      (accumulator, worldId) => {
+        const dataset = getWorldDataset(worldId);
+        const migrationMap = getWorldMigrationMap(worldId);
+        const storageApi = createStorageApi(worldId, dataset.zoneOrder, migrationMap);
+        const progress = storageApi.loadProgress();
+
+        accumulator.totalLp += progress.lp;
+        accumulator.completedChallenges += completedCount(progress);
+        accumulator.completedWorlds += isCampaignComplete(progress, dataset.zones) ? 1 : 0;
+
+        return accumulator;
+      },
+      {
+        worldCount: playableWorldIds.length,
+        totalLp: 0,
+        completedChallenges: 0,
+        completedWorlds: 0,
+      },
+    );
+  }, []);
 
   return (
     <section className="panel worlds-home-panel">
@@ -22,26 +46,21 @@ export function HomePage() {
         <p className="hero-tag">Локальная одиночная кампания EN → RU</p>
         <h2>Каталог учебных миров для перевода и терминологии</h2>
         <p>
-          Главный экран построен как витрина миров: активный мир можно проходить уже сейчас, а
-          новые подключаются добавлением одной записи в `src/data/worlds.ts`.
+          Главная страница показывает только платформенную сводку, а каждая кампания живет отдельно
+          внутри своего мира.
         </p>
-        <div className="hero-actions">
-          <Link to={activeWorldRoute} className="primary-button">
-            Начать кампанию
-          </Link>
-          <Link to="/trainer" className="secondary-button">
-            Открыть тренажёр
-          </Link>
-          <Link to="/results" className="secondary-button">
-            Смотреть сертификат
-          </Link>
-        </div>
       </header>
+
+      <div className="trainer-summary-row" aria-label="Платформенная сводка">
+        <span className="chip">Полноценных миров: {platformStats.worldCount}</span>
+        <span className="chip">Суммарный LP: {platformStats.totalLp}</span>
+        <span className="chip">Завершено заданий: {platformStats.completedChallenges}</span>
+        <span className="chip">Завершено миров: {platformStats.completedWorlds}</span>
+      </div>
 
       <div className="worlds-grid" role="list" aria-label="Список учебных миров">
         {learningWorlds.map((world) => {
           const isAvailable = world.availability === 'available';
-          const isActive = world.id === activeLearningWorldId;
 
           return (
             <article
@@ -69,15 +88,6 @@ export function HomePage() {
                 Фокус обучения: <strong>{world.focus}</strong>
               </p>
 
-              {isActive && (
-                <div className="world-progress">
-                  <span>
-                    Прогресс: {completion}/{world.challengeCount}
-                  </span>
-                  <span>Точность: {accuracy}%</span>
-                </div>
-              )}
-
               <div className="world-actions">
                 {isAvailable && world.route ? (
                   <Link to={world.route} className="primary-button">
@@ -92,13 +102,6 @@ export function HomePage() {
             </article>
           );
         })}
-      </div>
-
-      <div className="worlds-note card-elevated">
-        <p>
-          Для добавления нового мира укажи название, описание, цвета, маршрут и статус в
-          `src/data/worlds.ts`. Карточка появится на главной автоматически.
-        </p>
       </div>
     </section>
   );
